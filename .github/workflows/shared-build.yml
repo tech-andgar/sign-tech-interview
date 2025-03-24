@@ -103,7 +103,16 @@ jobs:
         run: |
           REPO_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2)
           DOMAIN="pr-${{ inputs.pr_number }}-${REPO_NAME}.surge.sh"
-          surge dist $DOMAIN --token ${{ secrets.SURGE_TOKEN }}
+          
+          # Crear archivo .netrc para autenticación
+          echo "machine surge.surge.sh" > ~/.netrc
+          echo "login $SURGE_LOGIN" >> ~/.netrc
+          echo "password $SURGE_TOKEN" >> ~/.netrc
+          chmod 600 ~/.netrc
+          
+          # Desplegar con Surge
+          surge --project ./dist --domain $DOMAIN
+          
           echo "PREVIEW_URL=https://${DOMAIN}" >> $GITHUB_ENV
 
       - name: Set preview URL output

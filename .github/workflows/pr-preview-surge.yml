@@ -72,10 +72,16 @@ jobs:
           SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
           SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
         run: |
+          # Crear archivo .netrc para autenticación
+          echo "machine surge.surge.sh" > ~/.netrc
+          echo "login $SURGE_LOGIN" >> ~/.netrc
+          echo "password $SURGE_TOKEN" >> ~/.netrc
+          chmod 600 ~/.netrc
+          
           PR_NUMBER=${{ github.event.pull_request.number }}
           REPO_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2)
           DOMAIN="pr-${PR_NUMBER}-${REPO_NAME}.surge.sh"
-          surge teardown $DOMAIN --token ${{ secrets.SURGE_TOKEN }}
+          surge teardown $DOMAIN
 
       - name: Comment PR Cleanup
         uses: actions/github-script@v6
