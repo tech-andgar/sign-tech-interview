@@ -3,13 +3,12 @@ import starlight from "@astrojs/starlight";
 
 const port = 4300;
 const localHostUrl = `http://localhost:${port}`;
-const liveUrl = "https://signlanguagetech.github.io";
+const liveUrl = "https://interview.signlanguagetech.com";
 const isProd = import.meta.env.PROD;
 
 export default defineConfig({
   server: { port },
   site: isProd ? liveUrl : localHostUrl,
-  base: isProd ? "/crack-interview" : "/",
   integrations: [
     starlight({
       plugins: [],
@@ -46,6 +45,28 @@ export default defineConfig({
       ],
       customCss: [
         './src/styles/custom.css',
+      ],
+      components: {
+        PageTitle: './src/components/PageTitle.astro',
+      },
+      head: [
+        {
+          tag: 'script',
+          attrs: {
+            src: 'https://www.googletagmanager.com/gtag/js?id=G-EM5400YMC3',
+            async: true,
+          }
+        },
+        {
+          tag: 'script',
+          content: `          
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-EM5400YMC3');
+          `
+        }
       ],
     }),
   ],
