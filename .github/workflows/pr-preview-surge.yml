@@ -28,7 +28,7 @@ jobs:
           script: |
             // Usar directamente la URL del workflow reutilizable
             const previewUrl = '${{ needs.deploy-preview.outputs.preview_url }}';
-            
+
             github.rest.issues.createComment({
               issue_number: context.payload.pull_request.number,
               owner: context.repo.owner,
@@ -82,16 +82,13 @@ jobs:
           SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
           SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
         run: |
-          # Crear archivo .netrc para autenticación
-          echo "machine surge.surge.sh" > ~/.netrc
-          echo "login $SURGE_LOGIN" >> ~/.netrc
-          echo "password $SURGE_TOKEN" >> ~/.netrc
-          chmod 600 ~/.netrc
-          
           # Usar el dominio definido en el paso anterior
           DOMAIN="${{ steps.domain.outputs.value }}"
           echo "Eliminando despliegue en $DOMAIN..."
-          surge teardown $DOMAIN
+          echo "Usando usuario $SURGE_LOGIN"
+
+          # Usar npx para ejecutar surge directamente con el token
+          npx surge teardown "$DOMAIN" --token "$SURGE_TOKEN"
 
       - name: Comment PR Cleanup
         uses: actions/github-script@v6
@@ -100,7 +97,7 @@ jobs:
           script: |
             const domain = '${{ steps.domain.outputs.value }}';
             const previewUrl = `https://${domain}`;
-            
+
             github.rest.issues.createComment({
               issue_number: context.payload.pull_request.number,
               owner: context.repo.owner,

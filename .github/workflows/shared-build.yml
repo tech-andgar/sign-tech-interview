@@ -111,24 +111,24 @@ jobs:
           SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
           SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
         run: |
-          # Crear archivo .netrc para autenticación
-          echo "machine surge.surge.sh" > ~/.netrc
-          echo "login $SURGE_LOGIN" >> ~/.netrc
-          echo "password $SURGE_TOKEN" >> ~/.netrc
-          chmod 600 ~/.netrc
-          
           # Verificar que el directorio dist existe y tiene contenido
           if [ ! -d "dist" ] || [ -z "$(ls -A dist)" ]; then
             echo "Error: El directorio dist no existe o está vacío"
             exit 1
           fi
-          
+
           # Asegurarse de que se usa exactamente el mismo dominio en todas partes
           DOMAIN="${{ steps.set_preview_url.outputs.domain }}"
-          
-          # Desplegar con Surge y mostrar más información de depuración
+
+          # Crear archivo de configuración de Surge (.surgeignore no hace nada, solo es para crearlo)
+          touch .surgeignore
+
+          # Desplegar con Surge usando el enfoque directo con credenciales como variables de entorno
           echo "Desplegando a $DOMAIN..."
-          surge --project ./dist --domain $DOMAIN
+          echo "Usando usuario $SURGE_LOGIN"
+
+          # Método 1: Directamente con las variables de entorno en el comando
+          npx surge ./dist "$DOMAIN" --token "$SURGE_TOKEN"
 
       # GitHub Pages artifact preparation (only for main branch)
       - name: Setup Pages
