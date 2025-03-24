@@ -1,0 +1,132 @@
+name: Shared Build Workflow
+
+on:
+  workflow_call:
+    outputs:
+      preview_url:
+        description: "URL of the preview deployment (if applicable)"
+        value: ${{ jobs.build.outputs.preview_url }}
+    inputs:
+      deploy_to_surge:
+        required: false
+        type: boolean
+        default: false
+      pr_number:
+        required: false
+        type: number
+        default: 0
+    secrets:
+      SURGE_TOKEN:
+        required: false
+      SURGE_LOGIN:
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      preview_url: ${{ steps.set_preview_url.outputs.preview_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
+
+      - name: Setup Node.js with PNPM cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 23
+          cache: 'pnpm'
+          cache-dependency-path: '**/pnpm-lock.yaml'
+
+      - name: Cache .vite
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.vite
+          key: ${{ runner.os }}-vite-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('astro.config.mjs', 'tsconfig.json') }}
+          restore-keys: |
+            ${{ runner.os }}-vite-${{ hashFiles('pnpm-lock.yaml') }}-
+            ${{ runner.os }}-vite-
+
+      - name: Cache Astro build output
+        uses: actions/cache@v4
+        with:
+          path: |
+            dist/
+            .astro/
+          key: ${{ runner.os }}-astro-build-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-astro-build-${{ hashFiles('pnpm-lock.yaml') }}-
+            ${{ runner.os }}-astro-build-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build site
+        run: pnpm build
+
+      # First set the preview URL so it's available throughout the workflow
+      - name: Set Preview URL
+        id: set_preview_url
+        if: inputs.deploy_to_surge
+        run: |
+          REPO_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2)
+          DOMAIN="pr-${{ inputs.pr_number }}-${REPO_NAME}.surge.sh"
+          echo "preview_url=https://${DOMAIN}" >> $GITHUB_OUTPUT
+          echo "domain=${DOMAIN}" >> $GITHUB_OUTPUT
+
+      # Conditional steps for Surge deployment
+      - name: Cache Surge packages
+        if: inputs.deploy_to_surge
+        uses: actions/cache@v4
+        id: surge-cache
+        with:
+          path: node_modules/.pnpm/surge
+          key: ${{ runner.os }}-pnpm-surge-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-surge-
+
+      - name: Install Surge with PNPM
+        if: inputs.deploy_to_surge
+        run: pnpm add --global surge
+
+      - name: Deploy to Surge
+        if: inputs.deploy_to_surge
+        env:
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+          SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
+        run: |
+          # Verify that the dist directory exists and contains content
+          if [ ! -d "dist" ] || [ -z "$(ls -A dist)" ]; then
+            echo "Error: The dist directory does not exist or is empty"
+            exit 1
+          fi
+
+          # Ensure that the same domain is used throughout
+          DOMAIN="${{ steps.set_preview_url.outputs.domain }}"
+
+          # Create Surge configuration file (.surgeignore doesn't do anything, just to create it)
+          touch .surgeignore
+
+          # Deploy with Surge using direct approach with credentials as environment variables
+          echo "Deploying to $DOMAIN..."
+          echo "Using user $SURGE_LOGIN"
+
+          # Use pnpm to execute surge
+          pnpm exec surge ./dist "$DOMAIN" --token "$SURGE_TOKEN"
+
+      # GitHub Pages artifact preparation (only for main branch)
+      - name: Setup Pages
+        if: ${{ !inputs.deploy_to_surge }}
+        id: pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact for GitHub Pages
+        if: ${{ !inputs.deploy_to_surge }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
