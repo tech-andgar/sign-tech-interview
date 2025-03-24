@@ -69,7 +69,7 @@ jobs:
       - name: Build site
         run: pnpm build
 
-      # Primero establezca la URL de vista previa para que esté disponible en toda la ejecución
+      # First set the preview URL so it's available throughout the workflow
       - name: Set Preview URL
         id: set_preview_url
         if: inputs.deploy_to_surge
@@ -80,30 +80,19 @@ jobs:
           echo "domain=${DOMAIN}" >> $GITHUB_OUTPUT
 
       # Conditional steps for Surge deployment
-      - name: Cache Surge
+      - name: Cache Surge packages
         if: inputs.deploy_to_surge
         uses: actions/cache@v4
         id: surge-cache
         with:
-          path: ~/.npm-global
-          key: ${{ runner.os }}-surge-${{ hashFiles('package.json') }}
+          path: node_modules/.pnpm/surge
+          key: ${{ runner.os }}-pnpm-surge-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-surge-
+            ${{ runner.os }}-pnpm-surge-
 
-      - name: Setup Surge global install directory
-        if: inputs.deploy_to_surge && steps.surge-cache.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ~/.npm-global
-          npm config set prefix '~/.npm-global'
-          echo "~/.npm-global/bin" >> $GITHUB_PATH
-
-      - name: Install Surge
-        if: inputs.deploy_to_surge && steps.surge-cache.outputs.cache-hit != 'true'
-        run: npm install -g surge
-
-      - name: Add Surge to PATH
-        if: inputs.deploy_to_surge && steps.surge-cache.outputs.cache-hit == 'true'
-        run: echo "~/.npm-global/bin" >> $GITHUB_PATH
+      - name: Install Surge with PNPM
+        if: inputs.deploy_to_surge
+        run: pnpm add --global surge
 
       - name: Deploy to Surge
         if: inputs.deploy_to_surge
@@ -111,24 +100,24 @@ jobs:
           SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
           SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
         run: |
-          # Verificar que el directorio dist existe y tiene contenido
+          # Verify that the dist directory exists and contains content
           if [ ! -d "dist" ] || [ -z "$(ls -A dist)" ]; then
-            echo "Error: El directorio dist no existe o está vacío"
+            echo "Error: The dist directory does not exist or is empty"
             exit 1
           fi
 
-          # Asegurarse de que se usa exactamente el mismo dominio en todas partes
+          # Ensure that the same domain is used throughout
           DOMAIN="${{ steps.set_preview_url.outputs.domain }}"
 
-          # Crear archivo de configuración de Surge (.surgeignore no hace nada, solo es para crearlo)
+          # Create Surge configuration file (.surgeignore doesn't do anything, just to create it)
           touch .surgeignore
 
-          # Desplegar con Surge usando el enfoque directo con credenciales como variables de entorno
-          echo "Desplegando a $DOMAIN..."
-          echo "Usando usuario $SURGE_LOGIN"
+          # Deploy with Surge using direct approach with credentials as environment variables
+          echo "Deploying to $DOMAIN..."
+          echo "Using user $SURGE_LOGIN"
 
-          # Método 1: Directamente con las variables de entorno en el comando
-          npx surge ./dist "$DOMAIN" --token "$SURGE_TOKEN"
+          # Use pnpm to execute surge
+          pnpm exec surge ./dist "$DOMAIN" --token "$SURGE_TOKEN"
 
       # GitHub Pages artifact preparation (only for main branch)
       - name: Setup Pages

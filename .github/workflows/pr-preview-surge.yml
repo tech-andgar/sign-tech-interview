@@ -26,9 +26,9 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            // Usar directamente la URL del workflow reutilizable
+            // Use the URL directly from the reusable workflow
             const previewUrl = '${{ needs.deploy-preview.outputs.preview_url }}';
-
+            
             github.rest.issues.createComment({
               issue_number: context.payload.pull_request.number,
               owner: context.repo.owner,
@@ -53,42 +53,41 @@ jobs:
           PR_NUMBER=${{ github.event.pull_request.number }}
           echo "value=pr-${PR_NUMBER}-${REPO_NAME}.surge.sh" >> $GITHUB_OUTPUT
 
-      - name: Cache Surge
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
+
+      - name: Setup Node.js with PNPM cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 23
+          cache: 'pnpm'
+
+      - name: Cache Surge packages
         uses: actions/cache@v4
         id: surge-cache
         with:
-          path: ~/.npm-global
-          key: ${{ runner.os }}-surge-${{ hashFiles('package.json') }}
+          path: node_modules/.pnpm/surge
+          key: ${{ runner.os }}-pnpm-surge-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-surge-
+            ${{ runner.os }}-pnpm-surge-
 
-      - name: Setup Surge global install directory
-        if: steps.surge-cache.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ~/.npm-global
-          npm config set prefix '~/.npm-global'
-          echo "~/.npm-global/bin" >> $GITHUB_PATH
-
-      - name: Install Surge
-        if: steps.surge-cache.outputs.cache-hit != 'true'
-        run: npm install -g surge
-
-      - name: Add Surge to PATH
-        if: steps.surge-cache.outputs.cache-hit == 'true'
-        run: echo "~/.npm-global/bin" >> $GITHUB_PATH
+      - name: Install Surge with PNPM
+        run: pnpm add --global surge
 
       - name: Teardown Surge deployment
         env:
           SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
           SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
         run: |
-          # Usar el dominio definido en el paso anterior
+          # Use the domain defined in the previous step
           DOMAIN="${{ steps.domain.outputs.value }}"
-          echo "Eliminando despliegue en $DOMAIN..."
-          echo "Usando usuario $SURGE_LOGIN"
-
-          # Usar npx para ejecutar surge directamente con el token
-          npx surge teardown "$DOMAIN" --token "$SURGE_TOKEN"
+          echo "Removing deployment at $DOMAIN..."
+          echo "Using user $SURGE_LOGIN"
+          
+          # Use pnpm to execute surge
+          pnpm exec surge teardown "$DOMAIN" --token "$SURGE_TOKEN"
 
       - name: Comment PR Cleanup
         uses: actions/github-script@v6
@@ -97,12 +96,12 @@ jobs:
           script: |
             const domain = '${{ steps.domain.outputs.value }}';
             const previewUrl = `https://${domain}`;
-
+            
             github.rest.issues.createComment({
               issue_number: context.payload.pull_request.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: `## 🧹 Preview Removed
 
-              El preview de \`${previewUrl}\` ha sido eliminado ya que el PR ha sido ${context.payload.pull_request.merged ? 'fusionado' : 'cerrado'}.`
+              The preview at \`${previewUrl}\` has been removed since the PR has been ${context.payload.pull_request.merged ? 'merged' : 'closed'}.`
             });
