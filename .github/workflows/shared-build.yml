@@ -69,6 +69,16 @@ jobs:
       - name: Build site
         run: pnpm build
 
+      # Primero establezca la URL de vista previa para que esté disponible en toda la ejecución
+      - name: Set Preview URL
+        id: set_preview_url
+        if: inputs.deploy_to_surge
+        run: |
+          REPO_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2)
+          DOMAIN="pr-${{ inputs.pr_number }}-${REPO_NAME}.surge.sh"
+          echo "preview_url=https://${DOMAIN}" >> $GITHUB_OUTPUT
+          echo "domain=${DOMAIN}" >> $GITHUB_OUTPUT
+
       # Conditional steps for Surge deployment
       - name: Cache Surge
         if: inputs.deploy_to_surge
@@ -101,24 +111,24 @@ jobs:
           SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
           SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
         run: |
-          REPO_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2)
-          DOMAIN="pr-${{ inputs.pr_number }}-${REPO_NAME}.surge.sh"
-          
           # Crear archivo .netrc para autenticación
           echo "machine surge.surge.sh" > ~/.netrc
           echo "login $SURGE_LOGIN" >> ~/.netrc
           echo "password $SURGE_TOKEN" >> ~/.netrc
           chmod 600 ~/.netrc
           
-          # Desplegar con Surge
-          surge --project ./dist --domain $DOMAIN
+          # Verificar que el directorio dist existe y tiene contenido
+          if [ ! -d "dist" ] || [ -z "$(ls -A dist)" ]; then
+            echo "Error: El directorio dist no existe o está vacío"
+            exit 1
+          fi
           
-          echo "PREVIEW_URL=https://${DOMAIN}" >> $GITHUB_ENV
-
-      - name: Set preview URL output
-        id: set_preview_url
-        if: inputs.deploy_to_surge
-        run: echo "preview_url=https://pr-${{ inputs.pr_number }}-$(echo $GITHUB_REPOSITORY | cut -d'/' -f2).surge.sh" >> $GITHUB_OUTPUT
+          # Asegurarse de que se usa exactamente el mismo dominio en todas partes
+          DOMAIN="${{ steps.set_preview_url.outputs.domain }}"
+          
+          # Desplegar con Surge y mostrar más información de depuración
+          echo "Desplegando a $DOMAIN..."
+          surge --project ./dist --domain $DOMAIN
 
       # GitHub Pages artifact preparation (only for main branch)
       - name: Setup Pages
