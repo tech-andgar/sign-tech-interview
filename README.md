@@ -49,3 +49,41 @@ Contributions of any kind are welcome!
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+# Preview Environments with Surge.sh
+
+This project uses GitHub Pages for production deployment and Surge.sh for Pull Request previews.
+
+## Setting up Surge.sh for PR Previews
+
+To enable automatic PR previews with Surge.sh:
+
+1. **Create a Surge.sh account**
+   ```
+   npm install -g surge
+   surge login
+   ```
+
+2. **Get your Surge.sh token**
+   ```
+   surge token
+   ```
+
+3. **Configure the secrets in GitHub**
+   
+   In your GitHub repository, go to Settings > Secrets > Actions and add:
+   
+   - `SURGE_TOKEN`: The token obtained in the previous step
+   - `SURGE_LOGIN`: Your Surge.sh email address
+
+## How It Works
+
+- Each time a PR is created or updated, it's automatically deployed to a unique Surge.sh domain
+- The workflow leaves a comment with the preview link on the PR
+- When the PR is closed or merged, the preview is automatically removed
+
+## Lifecycle
+
+1. **PR Creation/Update**: Deployed to `https://pr-{number}-{repository}.surge.sh`
+2. **PR Close/Merge**: Preview is automatically removed
+3. **Production**: The main site is deployed to GitHub Pages when changes reach the `main` branch
