@@ -43,8 +43,29 @@ jobs:
     if: github.event.action == 'closed'
 
     steps:
+      - name: Cache Surge
+        uses: actions/cache@v4
+        id: surge-cache
+        with:
+          path: ~/.npm-global
+          key: ${{ runner.os }}-surge-${{ hashFiles('package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-surge-
+
+      - name: Setup Surge global install directory
+        if: steps.surge-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.npm-global
+          npm config set prefix '~/.npm-global'
+          echo "~/.npm-global/bin" >> $GITHUB_PATH
+
       - name: Install Surge
+        if: steps.surge-cache.outputs.cache-hit != 'true'
         run: npm install -g surge
+
+      - name: Add Surge to PATH
+        if: steps.surge-cache.outputs.cache-hit == 'true'
+        run: echo "~/.npm-global/bin" >> $GITHUB_PATH
 
       - name: Teardown Surge deployment
         env:
