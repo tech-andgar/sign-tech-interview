@@ -24,6 +24,18 @@ jobs:
     if: needs.check-secrets.outputs.has_token == 'false'
     runs-on: ubuntu-latest
     steps:
+      - name: Comment PR if no SURGE_TOKEN
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚨 SURGE_TOKEN is not set in the repository secrets or is empty.'
+            })
+
       - name: Fail workflow
         run: |
           echo "::error::SURGE_TOKEN is not set in the repository secrets or is empty."
@@ -34,57 +46,15 @@ jobs:
   deploy-preview:
     needs: check-secrets
     if: needs.check-secrets.outputs.has_token == 'true'
-    runs-on: ubuntu-latest
 
-    env:
-      NODE_VERSION: '23'
-      REPO_NAME: ${{ github.repository }}
-      PR_NUMBER: ${{ github.event.pull_request.number }}
+    uses: ./.github/workflows/shared-build.yml
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v2
-        with:
-          version: latest
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-          cache-dependency-path: '**/pnpm-lock.yaml'
-
-      - name: Cache .vite
-        uses: actions/cache@v4
-        with:
-          path: node_modules/.vite
-          key: ${{ runner.os }}-vite-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('astro.config.mjs', 'tsconfig.json') }}
-          restore-keys: |
-            ${{ runner.os }}-vite-${{ hashFiles('pnpm-lock.yaml') }}-
-            ${{ runner.os }}-vite-
-
-      - name: Cache Astro build output
-        uses: actions/cache@v4
-        with:
-          path: |
-            dist/
-            .astro/
-          key: ${{ runner.os }}-astro-build-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-astro-build-${{ hashFiles('pnpm-lock.yaml') }}-
-            ${{ runner.os }}-astro-build-
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build site
-        run: pnpm run build
-
       - name: Generate domain name
         id: domain
+        env:
+          REPO_NAME: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           generate_domain() {
             local repo_name=$(echo "$REPO_NAME" | sed 's/.*\///')

@@ -7,49 +7,9 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/shared-build.yml
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v2
-        with:
-          version: latest
-
-      - name: Setup Node.js with PNPM cache
-        uses: actions/setup-node@v4
-        with:
-          node-version: 23
-          cache: 'pnpm'
-          cache-dependency-path: '**/pnpm-lock.yaml'
-
-      - name: Cache .vite
-        uses: actions/cache@v4
-        with:
-          path: node_modules/.vite
-          key: ${{ runner.os }}-vite-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('astro.config.mjs', 'tsconfig.json') }}
-          restore-keys: |
-            ${{ runner.os }}-vite-${{ hashFiles('pnpm-lock.yaml') }}-
-            ${{ runner.os }}-vite-
-
-      - name: Cache Astro build output
-        uses: actions/cache@v4
-        with:
-          path: |
-            dist/
-            .astro/
-          key: ${{ runner.os }}-astro-build-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-astro-build-${{ hashFiles('pnpm-lock.yaml') }}-
-            ${{ runner.os }}-astro-build-
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build
-        run: pnpm run build
-
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v4
