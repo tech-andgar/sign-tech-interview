@@ -61,14 +61,18 @@ jobs:
 
       - name: Teardown Surge deployment using script
         env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
           SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
         run: |
+          # Debug info
+          echo "Tearing down PR #$PR_NUMBER deployment"
+          
           # Make script executable
           chmod +x ./scripts/surge-deploy.sh
           
-          # Execute the teardown script
-          ./scripts/surge-deploy.sh teardown ${{ github.event.pull_request.number }} ${{ secrets.SURGE_TOKEN }} ${{ secrets.SURGE_LOGIN }}
+          # Execute the teardown script with quoted parameters
+          ./scripts/surge-deploy.sh teardown "$PR_NUMBER" "$SURGE_TOKEN" "$SURGE_LOGIN"
 
       - name: Comment PR Cleanup
         uses: actions/github-script@v6

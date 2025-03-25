@@ -90,12 +90,19 @@ jobs:
 
       - name: Deploy to Surge using script
         if: inputs.deploy_to_surge
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+          SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
         run: |
+          # Debug info
+          echo "Deploying PR #$PR_NUMBER"
+          
           # Make script executable
           chmod +x ./scripts/surge-deploy.sh
           
-          # Execute the deploy script
-          ./scripts/surge-deploy.sh deploy ${{ inputs.pr_number }} ${{ secrets.SURGE_TOKEN }} ${{ secrets.SURGE_LOGIN }}
+          # Execute the deploy script with quoted parameters to handle special characters
+          ./scripts/surge-deploy.sh deploy "$PR_NUMBER" "$SURGE_TOKEN" "$SURGE_LOGIN"
 
       # GitHub Pages artifact preparation (only for main branch)
       - name: Setup Pages
