@@ -45,7 +45,7 @@ jobs:
 
             URL: ${{ steps.deploy.outputs.url }}
 
-            Built with Node.js 20.11.1 and pnpm`;
+            Built with Node.js 23 and pnpm`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,

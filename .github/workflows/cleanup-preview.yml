@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Delete Surge.sh Preview
         run: |
-          npm install -g surge
+          pnpm install -g surge
           REPO_NAME=$(echo "${{ github.repository }}" | sed 's/.*\///')
           DEPLOY_DOMAIN="pr-${{ github.event.pull_request.number }}-${REPO_NAME}.surge.sh"
           surge teardown $DEPLOY_DOMAIN --token ${{ secrets.SURGE_TOKEN }}
