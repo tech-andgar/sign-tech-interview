@@ -80,7 +80,7 @@ jobs:
 
       - name: Deploy to Surge
         run: |
-          surge ./dist ${{ steps.domain.outputs.deploy_domain }}
+          TOKEN=${{ secrets.SURGE_TOKEN }} surge ./dist ${{ steps.domain.outputs.deploy_domain }} --token $TOKEN
 
       - name: Comment PR with Deployment URL
         uses: actions/github-script@v6
