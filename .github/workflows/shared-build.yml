@@ -50,9 +50,8 @@ jobs:
           path: |
             dist/
             .astro/
-          key: astro-build-${{ hashFiles('src/**/*.{js,jsx,ts,tsx,astro,md,mdx,css,sass,scss}') }}-${{ github.sha }}
+          key: astro-build-${{ hashFiles('src/**/*.{js,jsx,ts,tsx,astro,md,mdx,css,sass,scss}') }}
           restore-keys: |
-            astro-build-${{ hashFiles('src/**/*.{js,jsx,ts,tsx,astro,md,mdx,css,sass,scss}') }}-
             astro-build-
 
       - name: Install dependencies
@@ -77,6 +76,7 @@ jobs:
           echo "Git commit: ${{ github.sha }}" >> build-info/build-details.txt
           echo "Cache hit: ${{ steps.build_cache.outputs.cache-hit }}" >> build-info/build-details.txt
           echo "Node version: ${{ inputs.node_version }}" >> build-info/build-details.txt
+          echo "Files changed: ${{ toJSON(github.event.commits.*.modified) }}" >> build-info/build-details.txt
 
       - name: Upload build info
         uses: actions/upload-artifact@v4

@@ -86,6 +86,7 @@ jobs:
           DEPLOY_DOMAIN=$(generate_domain)
           echo "deploy_domain=$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
           echo "url=https://$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
+          echo "Is cache hit: $CACHE_HIT" # Debug info
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
@@ -107,7 +108,8 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             // Determine build source (cached or fresh)
-            const buildSource = process.env.CACHE_HIT === 'true' ? '(from cache)' : '(fresh build)';
+            const cacheHit = '${{ needs.build.outputs.cache_hit }}';
+            const buildSource = (cacheHit === 'true') ? '(from cache)' : '(fresh build)';
             
             const output = `🚀 Preview deployment is ready! ${buildSource}
 
