@@ -55,14 +55,14 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install dependencies
-        run: npm install
+        run: pnpm install
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
         
       - name: Setup Surge
         run: |
-          npm install -g surge
+          pnpm install -g surge
           mkdir -p ~/.surge
           echo "${{ secrets.SURGE_TOKEN }}" > ~/.surge/token
 
@@ -91,7 +91,7 @@ jobs:
 
             URL: ${{ steps.domain.outputs.url }}
 
-            Built with Node.js ${{ env.NODE_VERSION }} and npm`;
+            Built with Node.js ${{ env.NODE_VERSION }} and pnpm`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,

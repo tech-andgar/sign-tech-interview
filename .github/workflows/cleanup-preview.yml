@@ -50,7 +50,7 @@ jobs:
       
       - name: Setup Surge
         run: |
-          npm install -g surge
+          pnpm install -g surge
           mkdir -p ~/.surge
           echo "${{ secrets.SURGE_TOKEN }}" > ~/.surge/token
           
