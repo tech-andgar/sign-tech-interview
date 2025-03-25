@@ -66,10 +66,6 @@ jobs:
 
       - name: Build
         run: pnpm run build
-        
-      - name: Setup Surge
-        run: |
-          pnpm install -g surge
 
       - name: Generate domain name
         id: domain
@@ -85,7 +81,7 @@ jobs:
 
       - name: Deploy to Surge
         run: |
-          surge ./dist ${{ steps.domain.outputs.deploy_domain }} --token $TOKEN
+          pnpm exec surge ./dist ${{ steps.domain.outputs.deploy_domain }} --token $TOKEN
 
       - name: Comment PR with Deployment URL
         uses: actions/github-script@v6
