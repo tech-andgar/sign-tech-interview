@@ -61,12 +61,10 @@ jobs:
         with:
           version: latest
 
-      - name: Setup Node.js with PNPM cache
+      - name: Setup Node.js with PNPM
         uses: actions/setup-node@v4
         with:
           node-version: 23
-          cache: 'pnpm'
-          cache-dependency-path: '**/pnpm-lock.yaml'
 
       - name: Install Surge with PNPM
         run: pnpm add --global surge
