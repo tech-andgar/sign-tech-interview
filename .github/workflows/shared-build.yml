@@ -79,16 +79,16 @@ jobs:
           echo "preview_url=https://${DOMAIN}" >> $GITHUB_OUTPUT
           echo "domain=${DOMAIN}" >> $GITHUB_OUTPUT
 
-      # Conditional steps for Surge deployment
-      - name: Cache Surge packages
-        if: inputs.deploy_to_surge
-        uses: actions/cache@v4
-        id: surge-cache
-        with:
-          path: node_modules/.pnpm/surge
-          key: ${{ runner.os }}-pnpm-surge-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-surge-
+      # # Conditional steps for Surge deployment
+      # - name: Cache Surge packages
+      #   if: inputs.deploy_to_surge
+      #   uses: actions/cache@v4
+      #   id: surge-cache
+      #   with:
+      #     path: node_modules/.pnpm/surge
+      #     key: ${{ runner.os }}-pnpm-surge-${{ hashFiles('pnpm-lock.yaml') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-pnpm-surge-
 
       - name: Install Surge with PNPM
         if: inputs.deploy_to_surge

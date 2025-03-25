@@ -28,7 +28,7 @@ jobs:
           script: |
             // Use the URL directly from the reusable workflow
             const previewUrl = '${{ needs.deploy-preview.outputs.preview_url }}';
-            
+
             github.rest.issues.createComment({
               issue_number: context.payload.pull_request.number,
               owner: context.repo.owner,
@@ -53,6 +53,9 @@ jobs:
           PR_NUMBER=${{ github.event.pull_request.number }}
           echo "value=pr-${PR_NUMBER}-${REPO_NAME}.surge.sh" >> $GITHUB_OUTPUT
 
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Setup PNPM
         uses: pnpm/action-setup@v2
         with:
@@ -63,15 +66,7 @@ jobs:
         with:
           node-version: 23
           cache: 'pnpm'
-
-      - name: Cache Surge packages
-        uses: actions/cache@v4
-        id: surge-cache
-        with:
-          path: node_modules/.pnpm/surge
-          key: ${{ runner.os }}-pnpm-surge-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-surge-
+          cache-dependency-path: '**/pnpm-lock.yaml'
 
       - name: Install Surge with PNPM
         run: pnpm add --global surge
@@ -85,7 +80,7 @@ jobs:
           DOMAIN="${{ steps.domain.outputs.value }}"
           echo "Removing deployment at $DOMAIN..."
           echo "Using user $SURGE_LOGIN"
-          
+
           # Use pnpm to execute surge
           pnpm exec surge teardown "$DOMAIN" --token "$SURGE_TOKEN"
 
@@ -96,7 +91,7 @@ jobs:
           script: |
             const domain = '${{ steps.domain.outputs.value }}';
             const previewUrl = `https://${domain}`;
-            
+
             github.rest.issues.createComment({
               issue_number: context.payload.pull_request.number,
               owner: context.repo.owner,
