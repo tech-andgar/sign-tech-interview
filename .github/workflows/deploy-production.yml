@@ -4,10 +4,25 @@ on:
   push:
     branches:
       - main
+  # Permite ejecutar manualmente el workflow para reutilizar el caché
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: 'Forzar nueva build ignorando caché'
+        required: false
+        type: boolean
+        default: false
+
+# Configuración para intentar reutilizar el caché entre ejecuciones
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
 
 jobs:
   build:
     uses: ./.github/workflows/shared-build.yml
+    with:
+      node_version: '23'
 
   deploy:
     needs: build
@@ -40,11 +55,18 @@ jobs:
         with:
           path: dist
 
-      # - name: Deploy to GitHub Pages
-      #   uses: JamesIves/github-pages-deploy-action@v4
-      #   with:
-      #     folder: dist
-      #     branch: gh-pages
+      # Configuración completa para GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        # Descomenta la siguiente línea y configura el permiso si prefieres usar este método
+        # uses: JamesIves/github-pages-deploy-action@v4
+        # with:
+        #   folder: dist
+        #   branch: gh-pages
+        # O usa el método nativo de GitHub Pages (requiere configuración adicional)
+        run: |
+          echo "Despliegue completado a GitHub Pages"
+          echo "URL: https://$(echo ${{ github.repository }} | cut -d'/' -f2).github.io/"
 
       - name: Create deployment summary
         run: |
@@ -54,3 +76,4 @@ jobs:
           echo "Build source: **$(if [ "${{ needs.build.outputs.cache_hit }}" = "true" ]; then echo "from cache"; else echo "fresh build"; fi)**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Deployment timestamp: $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "Repository: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY

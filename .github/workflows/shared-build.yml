@@ -7,6 +7,10 @@ on:
         required: false
         type: string
         default: '23'
+      force_build:
+        required: false
+        type: boolean
+        default: false
     outputs:
       cache_hit:
         description: "Indicates if there was a cache hit on the build"
@@ -21,6 +25,24 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history to improve cache detección
+
+      # Determinar si se ha modificado el contenido desde la última compilación
+      - name: Check for content changes
+        id: check_changes
+        run: |
+          if [[ "${{ github.event_name }}" == "push" || "${{ github.event_name }}" == "pull_request" ]]; then
+            git diff --name-only HEAD^ HEAD > changed_files.txt
+            if grep -q "^src/" changed_files.txt; then
+              echo "content_changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "content_changed=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "content_changed=true" >> $GITHUB_OUTPUT
+          fi
+          echo "Event name: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Setup PNPM
         uses: pnpm/action-setup@v2
@@ -34,6 +56,7 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: '**/pnpm-lock.yaml'
 
+      # Mejor estrategia de caché para Vite
       - name: Cache .vite
         uses: actions/cache@v4
         with:
@@ -43,6 +66,7 @@ jobs:
             ${{ runner.os }}-vite-${{ hashFiles('pnpm-lock.yaml') }}-
             ${{ runner.os }}-vite-
 
+      # Cache para la build de Astro - versión mejorada
       - name: Check build cache
         id: build_cache
         uses: actions/cache@v4
@@ -50,33 +74,43 @@ jobs:
           path: |
             dist/
             .astro/
-          key: astro-build-${{ hashFiles('src/**/*.{js,jsx,ts,tsx,astro,md,mdx,css,sass,scss}') }}
+          key: astro-build-${{ github.ref_name }}-${{ hashFiles('src/**/*.{js,jsx,ts,tsx,astro,md,mdx,css,sass,scss}') }}
           restore-keys: |
+            astro-build-${{ github.ref_name }}-
             astro-build-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Determinamos si construir basado en caché y cambios
       - name: Build site
-        if: steps.build_cache.outputs.cache-hit != 'true'
+        if: |
+          inputs.force_build || 
+          steps.build_cache.outputs.cache-hit != 'true' || 
+          steps.check_changes.outputs.content_changed == 'true'
         run: pnpm run build
 
+      # Sube el artefacto siempre
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: build
           path: dist/
           retention-days: 1
-          compression-level: 9
+          compression-level: 9 # Máxima compresión para reducir tamaño
 
+      # Información detallada de build para debugging
       - name: Save build info
         run: |
           mkdir -p build-info
           echo "Build timestamp: $(date)" > build-info/build-details.txt
           echo "Git commit: ${{ github.sha }}" >> build-info/build-details.txt
+          echo "Branch/ref: ${{ github.ref_name }}" >> build-info/build-details.txt
           echo "Cache hit: ${{ steps.build_cache.outputs.cache-hit }}" >> build-info/build-details.txt
+          echo "Content changed: ${{ steps.check_changes.outputs.content_changed }}" >> build-info/build-details.txt
+          echo "Force build: ${{ inputs.force_build }}" >> build-info/build-details.txt
           echo "Node version: ${{ inputs.node_version }}" >> build-info/build-details.txt
-          echo "Files changed: ${{ toJSON(github.event.commits.*.modified) }}" >> build-info/build-details.txt
+          echo "Event: ${{ github.event_name }}" >> build-info/build-details.txt
 
       - name: Upload build info
         uses: actions/upload-artifact@v4
