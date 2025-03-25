@@ -88,34 +88,14 @@ jobs:
       #     restore-keys: |
       #       ${{ runner.os }}-pnpm-surge-
 
-      - name: Install Surge with PNPM
+      - name: Deploy to Surge using script
         if: inputs.deploy_to_surge
-        run: pnpm add --global surge
-
-      - name: Deploy to Surge
-        if: inputs.deploy_to_surge
-        env:
-          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
-          SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
         run: |
-          # Verify that the dist directory exists and contains content
-          if [ ! -d "dist" ] || [ -z "$(ls -A dist)" ]; then
-            echo "Error: The dist directory does not exist or is empty"
-            exit 1
-          fi
-
-          # Ensure that the same domain is used throughout
-          DOMAIN="${{ steps.set_preview_url.outputs.domain }}"
-
-          # Create Surge configuration file (.surgeignore doesn't do anything, just to create it)
-          touch .surgeignore
-
-          # Deploy with Surge using direct approach with credentials as environment variables
-          echo "Deploying to $DOMAIN..."
-          echo "Using user $SURGE_LOGIN"
-
-          # Use pnpm to execute surge
-          pnpm exec surge ./dist "$DOMAIN" --token "$SURGE_TOKEN"
+          # Make script executable
+          chmod +x ./scripts/surge-deploy.sh
+          
+          # Execute the deploy script
+          ./scripts/surge-deploy.sh deploy ${{ inputs.pr_number }} ${{ secrets.SURGE_TOKEN }} ${{ secrets.SURGE_LOGIN }}
 
       # GitHub Pages artifact preparation (only for main branch)
       - name: Setup Pages
