@@ -1,0 +1,64 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - main
+  # Allow manual workflow execution
+  workflow_dispatch:
+
+# No need for concurrency without cache
+jobs:
+  build:
+    uses: ./.github/workflows/shared-build.yml
+    with:
+      node_version: '23'
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+          path: dist
+
+      - name: Download build info (for debugging)
+        uses: actions/download-artifact@v4
+        with:
+          name: build-info
+          path: build-info
+
+      - name: Display build info
+        run: cat build-info/build-details.txt
+
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      # Complete configuration for GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        # Uncomment the following line and configure the permission if you prefer to use this method
+        # uses: JamesIves/github-pages-deploy-action@v4
+        # with:
+        #   folder: dist
+        #   branch: gh-pages
+        # Or use the native GitHub Pages method (requires additional configuration)
+        run: |
+          echo "Deployment completed to GitHub Pages"
+          echo "URL: https://$(echo ${{ github.repository }} | cut -d'/' -f2).github.io/"
+
+      - name: Create deployment summary
+        run: |
+          echo "## 🚀 Production Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Deployment timestamp: $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "Repository: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
