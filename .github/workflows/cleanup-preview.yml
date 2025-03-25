@@ -10,13 +10,6 @@ jobs:
     outputs:
       has_token: ${{ steps.check_token.outputs.has_token }}
     steps:
-      - name: Debug secrets
-        run: |
-          echo "Checking available secrets and context..."
-          echo "Has SURGE_TOKEN? ${{ secrets.SURGE_TOKEN != '' }}"
-          echo "Repository: ${{ github.repository }}"
-          echo "PR Number: ${{ github.event.pull_request.number }}"
-
       - name: Check for SURGE_TOKEN
         id: check_token
         run: |
@@ -29,7 +22,6 @@ jobs:
   fail-if-no-token:
     needs: check-secrets
     if: needs.check-secrets.outputs.has_token == 'false'
-    runs-on: ubuntu-latest
     steps:
       - name: Fail workflow
         run: |
