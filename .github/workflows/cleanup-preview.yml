@@ -15,10 +15,14 @@ jobs:
             echo "token_exists=true" >> $GITHUB_OUTPUT
           else
             echo "token_exists=false" >> $GITHUB_OUTPUT
-            echo "⚠️ WARNING: SURGE_TOKEN is not set in the repository secrets."
+            echo "::error::SURGE_TOKEN is not set in the repository secrets."
             echo "Please add it in your repository settings under Secrets > Actions."
             echo "You can get a token by running 'npx surge token' locally."
+            exit 1
           fi
+
+      - uses: actions/checkout@v4
+        if: steps.check_token.outputs.token_exists == 'true'
       
       - name: Setup Surge
         if: steps.check_token.outputs.token_exists == 'true'
