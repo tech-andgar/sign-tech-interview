@@ -18,8 +18,8 @@ importers:
         specifier: ^0.33.5
         version: 0.33.5
       starlight-blog:
-        specifier: ^0.18.0
-        version: 0.18.0(@astrojs/starlight@0.32.4(astro@5.5.4(rollup@4.35.0)(typescript@5.8.2)))(astro@5.5.4(rollup@4.35.0)(typescript@5.8.2))
+        specifier: ^0.19.0
+        version: 0.19.0(@astrojs/starlight@0.32.4(astro@5.5.4(rollup@4.35.0)(typescript@5.8.2)))(astro@5.5.4(rollup@4.35.0)(typescript@5.8.2))
 
 packages:
 
@@ -1491,8 +1491,8 @@ packages:
   space-separated-tokens@2.0.2:
     resolution: {integrity: sha512-PEGlAwrG8yXGXRjW32fGbg66JAlOAwbObuqVoJpv/mRgoWDQfgH1wDPvtzWyUSNAXBGSk8h755YDbbcEy3SH2Q==}
 
-  starlight-blog@0.18.0:
-    resolution: {integrity: sha512-8PzDqJQ0i0nWdXTYjs2OiCM4AiqSQgW2gEFNvFg5hGyULrHCModOnR+Byy9LShZiFyFzcBtbX2HGZC7SXpsVcw==}
+  starlight-blog@0.19.0:
+    resolution: {integrity: sha512-GWeSxqy4PPClbaDHZ0viWNSGdWwvB93DB6GQypSg+TzdxcmdXFjGLSqxHfeGXMR3gAYJj9ly3HkRXRL5zw7HEw==}
     engines: {node: '>=18.17.1'}
     peerDependencies:
       '@astrojs/starlight': '>=0.32.0'
@@ -3861,7 +3861,7 @@ snapshots:
 
   space-separated-tokens@2.0.2: {}
 
-  starlight-blog@0.18.0(@astrojs/starlight@0.32.4(astro@5.5.4(rollup@4.35.0)(typescript@5.8.2)))(astro@5.5.4(rollup@4.35.0)(typescript@5.8.2)):
+  starlight-blog@0.19.0(@astrojs/starlight@0.32.4(astro@5.5.4(rollup@4.35.0)(typescript@5.8.2)))(astro@5.5.4(rollup@4.35.0)(typescript@5.8.2)):
     dependencies:
       '@astrojs/mdx': 4.1.0(astro@5.5.4(rollup@4.35.0)(typescript@5.8.2))
       '@astrojs/rss': 4.0.11
