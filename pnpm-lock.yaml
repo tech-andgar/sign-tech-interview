@@ -22,7 +22,7 @@ importers:
         version: 0.19.0(@astrojs/starlight@0.32.4(astro@5.5.4(rollup@4.35.0)(typescript@5.8.2)))(astro@5.5.4(rollup@4.35.0)(typescript@5.8.2))
     devDependencies:
       surge:
-        specifier: latest
+        specifier: ^0.24.6
         version: 0.24.6
 
 packages:
