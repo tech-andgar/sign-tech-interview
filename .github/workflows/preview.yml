@@ -46,13 +46,20 @@ jobs:
       NODE_VERSION: '23'
       REPO_NAME: ${{ github.repository }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
+      TOKEN: ${{ secrets.SURGE_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install
@@ -80,7 +87,7 @@ jobs:
 
       - name: Deploy to Surge
         run: |
-          TOKEN=${{ secrets.SURGE_TOKEN }} surge ./dist ${{ steps.domain.outputs.deploy_domain }} --token $TOKEN
+          surge ./dist ${{ steps.domain.outputs.deploy_domain }} --token $TOKEN
 
       - name: Comment PR with Deployment URL
         uses: actions/github-script@v6
