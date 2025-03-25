@@ -16,7 +16,7 @@ jobs:
           echo "Has SURGE_TOKEN? ${{ secrets.SURGE_TOKEN != '' }}"
           echo "Repository: ${{ github.repository }}"
           echo "PR Number: ${{ github.event.pull_request.number }}"
-      
+
       - name: Check for SURGE_TOKEN
         id: check_token
         run: |
@@ -74,7 +74,7 @@ jobs:
             local repo_name=$(echo "$REPO_NAME" | sed 's/.*\///')
             echo "pr-$PR_NUMBER-${repo_name}.surge.sh"
           }
-          
+
           DEPLOY_DOMAIN=$(generate_domain)
           echo "deploy_domain=$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
           echo "url=https://$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
