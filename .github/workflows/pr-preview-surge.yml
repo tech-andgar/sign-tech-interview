@@ -28,7 +28,7 @@ jobs:
           script: |
             // Use the URL directly from the reusable workflow
             const previewUrl = '${{ needs.deploy-preview.outputs.preview_url }}';
-            
+
             github.rest.issues.createComment({
               issue_number: context.payload.pull_request.number,
               owner: context.repo.owner,
@@ -80,7 +80,7 @@ jobs:
           DOMAIN="${{ steps.domain.outputs.value }}"
           echo "Removing deployment at $DOMAIN..."
           echo "Using user $SURGE_LOGIN"
-          
+
           # Use pnpm to execute surge
           pnpm exec surge teardown "$DOMAIN" --token "$SURGE_TOKEN"
 
@@ -91,7 +91,7 @@ jobs:
           script: |
             const domain = '${{ steps.domain.outputs.value }}';
             const previewUrl = `https://${domain}`;
-            
+
             github.rest.issues.createComment({
               issue_number: context.payload.pull_request.number,
               owner: context.repo.owner,
