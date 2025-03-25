@@ -4,20 +4,10 @@ on:
   push:
     branches:
       - main
-  # Allow manual workflow execution to reuse cache
+  # Allow manual workflow execution
   workflow_dispatch:
-    inputs:
-      force_build:
-        description: 'Force new build ignoring cache'
-        required: false
-        type: boolean
-        default: false
 
-# Configuration to try to reuse cache between runs
-concurrency:
-  group: production-deployment
-  cancel-in-progress: false
-
+# No need for concurrency without cache
 jobs:
   build:
     uses: ./.github/workflows/shared-build.yml
@@ -27,8 +17,6 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    env:
-      CACHE_HIT: ${{ needs.build.outputs.cache_hit }}
     
     steps:
       - name: Download build artifact
@@ -71,9 +59,6 @@ jobs:
       - name: Create deployment summary
         run: |
           echo "## 🚀 Production Deployment" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Cache hit value: ${{ needs.build.outputs.cache_hit }}" >> $GITHUB_STEP_SUMMARY
-          echo "Build source: **$(if [ "${{ needs.build.outputs.cache_hit }}" = "true" ]; then echo "from cache"; else echo "fresh build"; fi)**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Deployment timestamp: $(date)" >> $GITHUB_STEP_SUMMARY
           echo "Repository: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY

@@ -54,7 +54,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NODE_VERSION: '23'
-      CACHE_HIT: ${{ needs.build.outputs.cache_hit }}
 
     steps:
       - name: Download build artifact
@@ -86,7 +85,6 @@ jobs:
           DEPLOY_DOMAIN=$(generate_domain)
           echo "deploy_domain=$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
           echo "url=https://$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
-          echo "Is cache hit: $CACHE_HIT" # Debug info
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
@@ -107,11 +105,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            // Determine build source (cached or fresh)
-            const cacheHit = '${{ needs.build.outputs.cache_hit }}';
-            const buildSource = (cacheHit === 'true') ? '(from cache)' : '(fresh build)';
-            
-            const output = `🚀 Preview deployment is ready! ${buildSource}
+            const output = `🚀 Preview deployment is ready!
 
             URL: ${{ steps.domain.outputs.url }}
 
