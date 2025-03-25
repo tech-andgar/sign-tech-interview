@@ -7,12 +7,18 @@
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "deploy:surge": "surge ./dist",
+    "deploy:surge:pr": "surge ./dist pr-$PR_NUMBER-$REPO_NAME.surge.sh",
+    "undeploy:surge": "surge teardown"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.32.4",
     "astro": "^5.5.4",
     "sharp": "^0.33.5",
     "starlight-blog": "^0.19.0"
+  },
+  "devDependencies": {
+    "surge": "latest"
   }
 }
