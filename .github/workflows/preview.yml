@@ -10,13 +10,6 @@ jobs:
     outputs:
       has_token: ${{ steps.check_token.outputs.has_token }}
     steps:
-      - name: Debug secrets
-        run: |
-          echo "Checking available secrets and context..."
-          echo "Has SURGE_TOKEN? ${{ secrets.SURGE_TOKEN != '' }}"
-          echo "Repository: ${{ github.repository }}"
-          echo "PR Number: ${{ github.event.pull_request.number }}"
-
       - name: Check for SURGE_TOKEN
         id: check_token
         run: |
@@ -42,13 +35,15 @@ jobs:
     needs: check-secrets
     if: needs.check-secrets.outputs.has_token == 'true'
     runs-on: ubuntu-latest
+
     env:
       NODE_VERSION: '23'
       REPO_NAME: ${{ github.repository }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
-      TOKEN: ${{ secrets.SURGE_TOKEN }}
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup PNPM
         uses: pnpm/action-setup@v2
@@ -60,11 +55,32 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
+          cache-dependency-path: '**/pnpm-lock.yaml'
+
+      - name: Cache .vite
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.vite
+          key: ${{ runner.os }}-vite-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('astro.config.mjs', 'tsconfig.json') }}
+          restore-keys: |
+            ${{ runner.os }}-vite-${{ hashFiles('pnpm-lock.yaml') }}-
+            ${{ runner.os }}-vite-
+
+      - name: Cache Astro build output
+        uses: actions/cache@v4
+        with:
+          path: |
+            dist/
+            .astro/
+          key: ${{ runner.os }}-astro-build-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-astro-build-${{ hashFiles('pnpm-lock.yaml') }}-
+            ${{ runner.os }}-astro-build-
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
-      - name: Build
+      - name: Build site
         run: pnpm run build
 
       - name: Generate domain name
@@ -80,8 +96,10 @@ jobs:
           echo "url=https://$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
 
       - name: Deploy to Surge
+        env:
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
         run: |
-          pnpm exec surge ./dist ${{ steps.domain.outputs.deploy_domain }} --token $TOKEN
+          pnpm exec surge ./dist ${{ steps.domain.outputs.deploy_domain }} --token $SURGE_TOKEN
 
       - name: Comment PR with Deployment URL
         uses: actions/github-script@v6

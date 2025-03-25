@@ -38,7 +38,7 @@ jobs:
     env:
       REPO_NAME: ${{ github.repository }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
-      TOKEN: ${{ secrets.SURGE_TOKEN }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -63,8 +63,10 @@ jobs:
           echo "deploy_domain=$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
 
       - name: Delete Surge.sh Preview
+        env:
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
         run: |
-          surge teardown ${{ steps.domain.outputs.deploy_domain }} --token $TOKEN
+          surge teardown ${{ steps.domain.outputs.deploy_domain }} --token $SURGE_TOKEN
 
       - name: Comment PR Success
         uses: actions/github-script@v6

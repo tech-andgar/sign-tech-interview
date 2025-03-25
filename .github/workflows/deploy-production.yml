@@ -9,21 +9,58 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
+
+      - name: Setup Node.js with PNPM cache
         uses: actions/setup-node@v4
         with:
-          node-version: '23'
+          node-version: 23
+          cache: 'pnpm'
+          cache-dependency-path: '**/pnpm-lock.yaml'
+
+      - name: Cache .vite
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.vite
+          key: ${{ runner.os }}-vite-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('astro.config.mjs', 'tsconfig.json') }}
+          restore-keys: |
+            ${{ runner.os }}-vite-${{ hashFiles('pnpm-lock.yaml') }}-
+            ${{ runner.os }}-vite-
+
+      - name: Cache Astro build output
+        uses: actions/cache@v4
+        with:
+          path: |
+            dist/
+            .astro/
+          key: ${{ runner.os }}-astro-build-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-astro-build-${{ hashFiles('pnpm-lock.yaml') }}-
+            ${{ runner.os }}-astro-build-
 
       - name: Install dependencies
-        run: npm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
 
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
         with:
-          folder: dist
-          branch: gh-pages
+          path: dist
+
+      # - name: Deploy to GitHub Pages
+      #   uses: JamesIves/github-pages-deploy-action@v4
+      #   with:
+      #     folder: dist
+      #     branch: gh-pages
