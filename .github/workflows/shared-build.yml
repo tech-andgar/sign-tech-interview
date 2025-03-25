@@ -11,6 +11,7 @@ on:
         required: false
         type: boolean
         default: false
+        description: "When set to true, will always perform a new build regardless of cache status or content changes. Useful for troubleshooting or ensuring a clean build."
     outputs:
       cache_hit:
         description: "Indicates if there was a cache hit on the build"
@@ -103,7 +104,10 @@ jobs:
           CACHE_HIT="${{ steps.build_cache.outputs.cache-hit }}"
           CONTENT_CHANGED="${{ steps.check_changes.outputs.content_changed }}"
           
-          # Determine if build is needed
+          # Determine if build is needed based on three criteria:
+          # 1. force_build: User explicitly requested a new build
+          # 2. cache_hit: No previous build found in cache
+          # 3. content_changed: Source files have been modified
           if [[ "$FORCE_BUILD" == "true" ]]; then
             echo "Building because force_build is true"
             SHOULD_BUILD=true
