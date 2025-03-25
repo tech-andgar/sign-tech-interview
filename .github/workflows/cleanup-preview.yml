@@ -8,13 +8,26 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-      - name: Delete Surge.sh Preview
+      - name: Setup Surge
         run: |
           npm install -g surge
+          mkdir -p ~/.surge
+          echo "${{ secrets.SURGE_TOKEN }}" > ~/.surge/token
+          
+      - name: Verify Surge Token
+        run: |
+          if [ -z "${{ secrets.SURGE_TOKEN }}" ]; then
+            echo "Error: SURGE_TOKEN is not set in the repository secrets."
+            exit 1
+          fi
+          echo "Surge token is configured."
+          
+      - name: Delete Surge.sh Preview
+        run: |
           REPO_NAME=$(echo "${{ github.repository }}" | sed 's/.*\///')
           DEPLOY_DOMAIN="pr-${{ github.event.pull_request.number }}-${REPO_NAME}.surge.sh"
-          surge teardown $DEPLOY_DOMAIN --token ${{ secrets.SURGE_TOKEN }}
-
+          surge teardown $DEPLOY_DOMAIN
+          
       - name: Comment PR
         uses: actions/github-script@v6
         with:

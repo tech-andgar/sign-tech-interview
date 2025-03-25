@@ -20,14 +20,27 @@ jobs:
 
       - name: Build
         run: npm run build
+        
+      - name: Setup Surge
+        run: |
+          npm install -g surge
+          mkdir -p ~/.surge
+          echo "${{ secrets.SURGE_TOKEN }}" > ~/.surge/token
+          
+      - name: Verify Surge Token
+        run: |
+          if [ -z "${{ secrets.SURGE_TOKEN }}" ]; then
+            echo "Error: SURGE_TOKEN is not set in the repository secrets."
+            exit 1
+          fi
+          echo "Surge token is configured."
 
       - name: Deploy to Surge
         id: deploy
         run: |
-          npm install -g surge
           REPO_NAME=$(echo "${{ github.repository }}" | sed 's/.*\///')
           DEPLOY_DOMAIN="pr-${{ github.event.pull_request.number }}-${REPO_NAME}.surge.sh"
-          surge ./dist $DEPLOY_DOMAIN --token ${{ secrets.SURGE_TOKEN }}
+          surge ./dist $DEPLOY_DOMAIN
           echo "url=https://$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
           echo "domain=$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
 
