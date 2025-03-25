@@ -21,21 +21,27 @@ jobs:
       - name: Build
         run: npm run build
         
+      - name: Check if SURGE_TOKEN secret exists
+        id: check_token
+        run: |
+          if [[ -n "${{ secrets.SURGE_TOKEN }}" ]]; then
+            echo "token_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "token_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ WARNING: SURGE_TOKEN is not set in the repository secrets."
+            echo "Please add it in your repository settings under Secrets > Actions."
+            echo "You can get a token by running 'npx surge token' locally."
+          fi
+        
       - name: Setup Surge
+        if: steps.check_token.outputs.token_exists == 'true'
         run: |
           npm install -g surge
           mkdir -p ~/.surge
           echo "${{ secrets.SURGE_TOKEN }}" > ~/.surge/token
-          
-      - name: Verify Surge Token
-        run: |
-          if [ -z "${{ secrets.SURGE_TOKEN }}" ]; then
-            echo "Error: SURGE_TOKEN is not set in the repository secrets."
-            exit 1
-          fi
-          echo "Surge token is configured."
 
       - name: Deploy to Surge
+        if: steps.check_token.outputs.token_exists == 'true'
         id: deploy
         run: |
           REPO_NAME=$(echo "${{ github.repository }}" | sed 's/.*\///')
@@ -44,7 +50,8 @@ jobs:
           echo "url=https://$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
           echo "domain=$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
 
-      - name: Comment PR
+      - name: Comment PR with Deployment URL
+        if: steps.check_token.outputs.token_exists == 'true'
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -54,6 +61,28 @@ jobs:
             URL: ${{ steps.deploy.outputs.url }}
 
             Built with Node.js 23 and npm`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+            
+      - name: Comment PR with Token Missing Warning
+        if: steps.check_token.outputs.token_exists == 'false'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `⚠️ **No se pudo realizar el despliegue de preview**
+
+            El secreto SURGE_TOKEN no está configurado en este repositorio.
+            
+            Para configurarlo:
+            1. Genera un token con \`npx surge token\` en tu máquina local
+            2. Ve a Settings > Secrets and variables > Actions en este repositorio
+            3. Crea un nuevo secreto llamado SURGE_TOKEN con el valor generado`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
