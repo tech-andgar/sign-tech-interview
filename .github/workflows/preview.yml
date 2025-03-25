@@ -15,21 +15,16 @@ jobs:
         with:
           node-version: '23'
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: latest
-
       - name: Install dependencies
-        run: pnpm install
+        run: npm install
 
       - name: Build
-        run: pnpm build
+        run: npm run build
 
       - name: Deploy to Surge
         id: deploy
         run: |
-          pnpm install -g surge
+          npm install -g surge
           REPO_NAME=$(echo "${{ github.repository }}" | sed 's/.*\///')
           DEPLOY_DOMAIN="pr-${{ github.event.pull_request.number }}-${REPO_NAME}.surge.sh"
           surge ./dist $DEPLOY_DOMAIN --token ${{ secrets.SURGE_TOKEN }}
@@ -45,7 +40,7 @@ jobs:
 
             URL: ${{ steps.deploy.outputs.url }}
 
-            Built with Node.js 23 and pnpm`;
+            Built with Node.js 23 and npm`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
