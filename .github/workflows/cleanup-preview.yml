@@ -5,22 +5,47 @@ on:
     types: [closed]
 
 jobs:
+  check-secrets:
+    runs-on: ubuntu-latest
+    outputs:
+      has_token: ${{ steps.check_token.outputs.has_token }}
+    steps:
+      - name: Debug secrets
+        run: |
+          echo "Checking available secrets and context..."
+          echo "Has SURGE_TOKEN? ${{ secrets.SURGE_TOKEN != '' }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "PR Number: ${{ github.event.pull_request.number }}"
+      
+      - name: Check for SURGE_TOKEN
+        id: check_token
+        run: |
+          if [ -n "${{ secrets.SURGE_TOKEN }}" ]; then
+            echo "has_token=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_token=false" >> $GITHUB_OUTPUT
+          fi
+
+  fail-if-no-token:
+    needs: check-secrets
+    if: needs.check-secrets.outputs.has_token == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail workflow
+        run: |
+          echo "::error::SURGE_TOKEN is not set in the repository secrets or is empty."
+          echo "Please add it in your repository settings under Settings > Secrets and variables > Actions."
+          echo "You can get a token by running 'npx surge token' locally."
+          exit 1
+
   cleanup:
+    needs: check-secrets
+    if: needs.check-secrets.outputs.has_token == 'true'
     runs-on: ubuntu-latest
     env:
       REPO_NAME: ${{ github.repository }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
     steps:
-      - name: Check if SURGE_TOKEN secret exists
-        run: |
-          if [[ -z "${{ secrets.SURGE_TOKEN }}" ]]; then
-            echo "::error::SURGE_TOKEN is not set in the repository secrets."
-            echo "Please add it in your repository settings under Secrets > Actions."
-            echo "You can get a token by running 'npx surge token' locally."
-            exit 1
-          fi
-          echo "Surge token is configured correctly."
-
       - uses: actions/checkout@v4
       
       - name: Setup Surge
