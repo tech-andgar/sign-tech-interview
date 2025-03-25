@@ -16,7 +16,7 @@ jobs:
           echo "Has SURGE_TOKEN? ${{ secrets.SURGE_TOKEN != '' }}"
           echo "Repository: ${{ github.repository }}"
           echo "PR Number: ${{ github.event.pull_request.number }}"
-      
+
       - name: Check for SURGE_TOKEN
         id: check_token
         run: |
@@ -45,20 +45,21 @@ jobs:
     env:
       REPO_NAME: ${{ github.repository }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
+      TOKEN: ${{ secrets.SURGE_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup PNPM
         uses: pnpm/action-setup@v2
         with:
-          version: latest
+          version: 2.2.2
 
       - name: Setup Surge
         run: |
           pnpm install -g surge
           mkdir -p ~/.surge
-          echo "${{ secrets.SURGE_TOKEN }}" > ~/.surge/token
-          
+          echo "$TOKEN" > ~/.surge/token
+
       - name: Generate domain name
         id: domain
         run: |
@@ -66,14 +67,14 @@ jobs:
             local repo_name=$(echo "$REPO_NAME" | sed 's/.*\///')
             echo "pr-$PR_NUMBER-${repo_name}.surge.sh"
           }
-          
+
           DEPLOY_DOMAIN=$(generate_domain)
           echo "deploy_domain=$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
-          
+
       - name: Delete Surge.sh Preview
         run: |
           surge teardown ${{ steps.domain.outputs.deploy_domain }}
-          
+
       - name: Comment PR Success
         uses: actions/github-script@v6
         with:
