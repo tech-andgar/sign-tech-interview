@@ -22,6 +22,7 @@ jobs:
   fail-if-no-token:
     needs: check-secrets
     if: needs.check-secrets.outputs.has_token == 'false'
+    runs-on: ubuntu-latest
     steps:
       - name: Fail workflow
         run: |
