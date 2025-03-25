@@ -18,6 +18,17 @@ concurrency:
   group: production-deployment-${{ github.ref_name }}
   cancel-in-progress: false
 
+# Add permissions required for GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Environment configuration for GitHub Pages
+environment:
+  name: github-pages
+  url: ${{ steps.deployment.outputs.page_url }}
+
 jobs:
   build:
     uses: ./.github/workflows/shared-build.yml
@@ -56,18 +67,9 @@ jobs:
         with:
           path: dist
 
-      # Complete configuration for GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
-        # Uncomment the following line and configure permissions if you prefer to use this method
-        # uses: JamesIves/github-pages-deploy-action@v4
-        # with:
-        #   folder: dist
-        #   branch: gh-pages
-        # Or use GitHub Pages native method (requires additional configuration)
-        run: |
-          echo "Deployment completed to GitHub Pages"
-          echo "URL: https://$(echo ${{ github.repository }} | cut -d'/' -f2).github.io/"
+        uses: actions/deploy-pages@v4
 
       - name: Create deployment summary
         run: |
@@ -79,3 +81,4 @@ jobs:
           echo "Deployment timestamp: $(date)" >> $GITHUB_STEP_SUMMARY
           echo "Repository: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
           echo "Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "Deployment URL: ${{ steps.deployment.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
