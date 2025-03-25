@@ -26,23 +26,35 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history to improve cache detección
+          fetch-depth: 0  # Fetch all history to improve cache detection
 
       # Determinar si se ha modificado el contenido desde la última compilación
       - name: Check for content changes
         id: check_changes
         run: |
+          echo "Checking for content changes..."
+          
+          # Por defecto, asumir que hay cambios
+          CONTENT_CHANGED=true
+          
+          # Solo verificar cambios si es un push o PR
           if [[ "${{ github.event_name }}" == "push" || "${{ github.event_name }}" == "pull_request" ]]; then
-            git diff --name-only HEAD^ HEAD > changed_files.txt
-            if grep -q "^src/" changed_files.txt; then
-              echo "content_changed=true" >> $GITHUB_OUTPUT
+            if git diff --name-only HEAD^ HEAD | grep -q "^src/"; then
+              echo "Content changes detected in src/ directory"
+              CONTENT_CHANGED=true
             else
-              echo "content_changed=false" >> $GITHUB_OUTPUT
+              echo "No content changes detected in src/ directory"
+              CONTENT_CHANGED=false
             fi
           else
-            echo "content_changed=true" >> $GITHUB_OUTPUT
+            echo "Event type is not push or PR, assuming content changed"
           fi
-          echo "Event name: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          
+          # Guardar resultado y mostrarlo
+          echo "content_changed=$CONTENT_CHANGED" >> $GITHUB_OUTPUT
+          echo "Content changed: $CONTENT_CHANGED"
+          echo "Event: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "Content changed: $CONTENT_CHANGED" >> $GITHUB_STEP_SUMMARY
 
       - name: Setup PNPM
         uses: pnpm/action-setup@v2
@@ -56,7 +68,7 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: '**/pnpm-lock.yaml'
 
-      # Mejor estrategia de caché para Vite
+      # Estrategia de caché para Vite
       - name: Cache .vite
         uses: actions/cache@v4
         with:
@@ -66,7 +78,7 @@ jobs:
             ${{ runner.os }}-vite-${{ hashFiles('pnpm-lock.yaml') }}-
             ${{ runner.os }}-vite-
 
-      # Cache para la build de Astro - versión mejorada
+      # Cache para la build de Astro - versión mejorada por rama
       - name: Check build cache
         id: build_cache
         uses: actions/cache@v4
@@ -82,12 +94,43 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Determinamos si construir basado en caché y cambios
+      # Determinar si necesitamos construir el sitio
+      - name: Determine if build is needed
+        id: need_build
+        run: |
+          # Inicializar variables
+          FORCE_BUILD="${{ inputs.force_build }}"
+          CACHE_HIT="${{ steps.build_cache.outputs.cache-hit }}"
+          CONTENT_CHANGED="${{ steps.check_changes.outputs.content_changed }}"
+          
+          # Determinar si se necesita construir
+          if [[ "$FORCE_BUILD" == "true" ]]; then
+            echo "Building because force_build is true"
+            SHOULD_BUILD=true
+          elif [[ "$CACHE_HIT" != "true" ]]; then
+            echo "Building because no cache was found"
+            SHOULD_BUILD=true
+          elif [[ "$CONTENT_CHANGED" == "true" ]]; then
+            echo "Building because content has changed"
+            SHOULD_BUILD=true
+          else
+            echo "Skipping build - using cache (no changes detected)"
+            SHOULD_BUILD=false
+          fi
+          
+          # Guardar resultado
+          echo "should_build=$SHOULD_BUILD" >> $GITHUB_OUTPUT
+          
+          # Registro detallado para diagnóstico
+          echo "Build decision:" >> $GITHUB_STEP_SUMMARY
+          echo "- Force build: $FORCE_BUILD" >> $GITHUB_STEP_SUMMARY
+          echo "- Cache hit: $CACHE_HIT" >> $GITHUB_STEP_SUMMARY
+          echo "- Content changed: $CONTENT_CHANGED" >> $GITHUB_STEP_SUMMARY
+          echo "- Will build: $SHOULD_BUILD" >> $GITHUB_STEP_SUMMARY
+
+      # Solo construir si es necesario
       - name: Build site
-        if: |
-          inputs.force_build || 
-          steps.build_cache.outputs.cache-hit != 'true' || 
-          steps.check_changes.outputs.content_changed == 'true'
+        if: steps.need_build.outputs.should_build == 'true'
         run: pnpm run build
 
       # Sube el artefacto siempre
@@ -109,6 +152,7 @@ jobs:
           echo "Cache hit: ${{ steps.build_cache.outputs.cache-hit }}" >> build-info/build-details.txt
           echo "Content changed: ${{ steps.check_changes.outputs.content_changed }}" >> build-info/build-details.txt
           echo "Force build: ${{ inputs.force_build }}" >> build-info/build-details.txt
+          echo "Should build: ${{ steps.need_build.outputs.should_build }}" >> build-info/build-details.txt
           echo "Node version: ${{ inputs.node_version }}" >> build-info/build-details.txt
           echo "Event: ${{ github.event_name }}" >> build-info/build-details.txt
 

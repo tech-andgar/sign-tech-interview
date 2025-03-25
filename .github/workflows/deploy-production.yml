@@ -15,7 +15,7 @@ on:
 
 # Configuración para intentar reutilizar el caché entre ejecuciones
 concurrency:
-  group: production-deployment
+  group: production-deployment-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -23,6 +23,7 @@ jobs:
     uses: ./.github/workflows/shared-build.yml
     with:
       node_version: '23'
+      force_build: ${{ inputs.force_build }}
 
   deploy:
     needs: build
@@ -77,3 +78,4 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Deployment timestamp: $(date)" >> $GITHUB_STEP_SUMMARY
           echo "Repository: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
