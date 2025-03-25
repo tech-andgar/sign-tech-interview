@@ -34,7 +34,7 @@ jobs:
 
       - name: Build
         run: npm run build
-        
+
       - name: Setup Surge
         run: |
           npm install -g surge
@@ -48,7 +48,7 @@ jobs:
             local repo_name=$(echo "$REPO_NAME" | sed 's/.*\///')
             echo "pr-$PR_NUMBER-${repo_name}.surge.sh"
           }
-          
+
           DEPLOY_DOMAIN=$(generate_domain)
           echo "deploy_domain=$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
           echo "url=https://$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
