@@ -66,12 +66,6 @@ jobs:
 
       - name: Build
         run: pnpm run build
-        
-      - name: Setup Surge
-        run: |
-          pnpm install -g surge
-          mkdir -p ~/.surge
-          echo "${{ secrets.SURGE_TOKEN }}" > ~/.surge/token
 
       - name: Generate domain name
         id: domain

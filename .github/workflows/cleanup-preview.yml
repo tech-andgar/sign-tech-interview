@@ -57,8 +57,6 @@ jobs:
       - name: Setup Surge
         run: |
           pnpm install -g surge
-          mkdir -p ~/.surge
-          echo "$TOKEN" > ~/.surge/token
 
       - name: Generate domain name
         id: domain
@@ -73,7 +71,7 @@ jobs:
 
       - name: Delete Surge.sh Preview
         run: |
-          surge teardown ${{ steps.domain.outputs.deploy_domain }}
+          surge teardown ${{ steps.domain.outputs.deploy_domain }} --token $TOKEN
 
       - name: Comment PR Success
         uses: actions/github-script@v6
