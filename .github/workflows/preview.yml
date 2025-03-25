@@ -54,13 +54,23 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NODE_VERSION: '23'
-      
+      CACHE_HIT: ${{ needs.build.outputs.cache_hit }}
+
     steps:
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
           name: build
           path: dist
+
+      - name: Download build info (for debugging)
+        uses: actions/download-artifact@v4
+        with:
+          name: build-info
+          path: build-info
+
+      - name: Display build info
+        run: cat build-info/build-details.txt
 
       - name: Generate domain name
         id: domain
@@ -96,7 +106,10 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const output = `🚀 Preview deployment is ready!
+            // Determine build source (cached or fresh)
+            const buildSource = process.env.CACHE_HIT === 'true' ? '(from cache)' : '(fresh build)';
+            
+            const output = `🚀 Preview deployment is ready! ${buildSource}
 
             URL: ${{ steps.domain.outputs.url }}
 

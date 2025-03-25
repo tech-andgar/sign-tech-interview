@@ -12,6 +12,8 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    env:
+      CACHE_HIT: ${{ needs.build.outputs.cache_hit }}
     
     steps:
       - name: Download build artifact
@@ -19,6 +21,15 @@ jobs:
         with:
           name: build
           path: dist
+
+      - name: Download build info (for debugging)
+        uses: actions/download-artifact@v4
+        with:
+          name: build-info
+          path: build-info
+
+      - name: Display build info
+        run: cat build-info/build-details.txt
 
       - name: Setup Pages
         id: pages
@@ -34,3 +45,11 @@ jobs:
       #   with:
       #     folder: dist
       #     branch: gh-pages
+
+      - name: Create deployment summary
+        run: |
+          echo "## 🚀 Production Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Build source: **$([ "$CACHE_HIT" == "true" ] && echo "from cache" || echo "fresh build")**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Deployment timestamp: $(date)" >> $GITHUB_STEP_SUMMARY

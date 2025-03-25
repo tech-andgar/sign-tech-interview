@@ -7,10 +7,16 @@ on:
         required: false
         type: string
         default: '23'
+    outputs:
+      cache_hit:
+        description: "Indicates if there was a cache hit on the build"
+        value: ${{ jobs.build.outputs.cache_hit }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      cache_hit: ${{ steps.build_cache.outputs.cache-hit }}
 
     steps:
       - name: Checkout repository
@@ -37,21 +43,23 @@ jobs:
             ${{ runner.os }}-vite-${{ hashFiles('pnpm-lock.yaml') }}-
             ${{ runner.os }}-vite-
 
-      - name: Cache Astro build output
+      - name: Check build cache
+        id: build_cache
         uses: actions/cache@v4
         with:
           path: |
             dist/
             .astro/
-          key: ${{ runner.os }}-astro-build-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          key: astro-build-${{ hashFiles('src/**/*.{js,jsx,ts,tsx,astro,md,mdx,css,sass,scss}') }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-astro-build-${{ hashFiles('pnpm-lock.yaml') }}-
-            ${{ runner.os }}-astro-build-
+            astro-build-${{ hashFiles('src/**/*.{js,jsx,ts,tsx,astro,md,mdx,css,sass,scss}') }}-
+            astro-build-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build site
+        if: steps.build_cache.outputs.cache-hit != 'true'
         run: pnpm run build
 
       - name: Upload build artifact
@@ -59,4 +67,20 @@ jobs:
         with:
           name: build
           path: dist/
+          retention-days: 1
+          compression-level: 9
+
+      - name: Save build info
+        run: |
+          mkdir -p build-info
+          echo "Build timestamp: $(date)" > build-info/build-details.txt
+          echo "Git commit: ${{ github.sha }}" >> build-info/build-details.txt
+          echo "Cache hit: ${{ steps.build_cache.outputs.cache-hit }}" >> build-info/build-details.txt
+          echo "Node version: ${{ inputs.node_version }}" >> build-info/build-details.txt
+
+      - name: Upload build info
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-info
+          path: build-info/
           retention-days: 1
