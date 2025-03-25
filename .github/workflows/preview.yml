@@ -43,13 +43,25 @@ jobs:
           echo "You can get a token by running 'npx surge token' locally."
           exit 1
 
-  deploy-preview:
+  build:
     needs: check-secrets
     if: needs.check-secrets.outputs.has_token == 'true'
-
     uses: ./.github/workflows/shared-build.yml
 
+  deploy-preview:
+    needs: build
+    if: needs.check-secrets.outputs.has_token == 'true'
+    runs-on: ubuntu-latest
+    env:
+      NODE_VERSION: '23'
+      
     steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build
+          path: dist
+
       - name: Generate domain name
         id: domain
         env:
@@ -65,11 +77,19 @@ jobs:
           echo "deploy_domain=$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
           echo "url=https://$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
+
+      - name: Install surge
+        run: pnpm install -g surge
+
       - name: Deploy to Surge
         env:
           SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
         run: |
-          pnpm exec surge ./dist ${{ steps.domain.outputs.deploy_domain }} --token $SURGE_TOKEN
+          surge ./dist ${{ steps.domain.outputs.deploy_domain }} --token $SURGE_TOKEN
 
       - name: Comment PR with Deployment URL
         uses: actions/github-script@v6

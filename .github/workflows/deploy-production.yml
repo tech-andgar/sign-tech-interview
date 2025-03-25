@@ -6,10 +6,20 @@ on:
       - main
 
 jobs:
-  deploy:
+  build:
     uses: ./.github/workflows/shared-build.yml
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    
     steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build
+          path: dist
+
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v4
