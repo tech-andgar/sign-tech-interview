@@ -28,16 +28,16 @@ jobs:
         with:
           fetch-depth: 0  # Fetch all history to improve cache detection
 
-      # Determinar si se ha modificado el contenido desde la última compilación
+      # Check if content has been modified since the last build
       - name: Check for content changes
         id: check_changes
         run: |
           echo "Checking for content changes..."
           
-          # Por defecto, asumir que hay cambios
+          # Default assumption: changes exist
           CONTENT_CHANGED=true
           
-          # Solo verificar cambios si es un push o PR
+          # Only check for changes if it's a push or PR event
           if [[ "${{ github.event_name }}" == "push" || "${{ github.event_name }}" == "pull_request" ]]; then
             if git diff --name-only HEAD^ HEAD | grep -q "^src/"; then
               echo "Content changes detected in src/ directory"
@@ -50,7 +50,7 @@ jobs:
             echo "Event type is not push or PR, assuming content changed"
           fi
           
-          # Guardar resultado y mostrarlo
+          # Save and display result
           echo "content_changed=$CONTENT_CHANGED" >> $GITHUB_OUTPUT
           echo "Content changed: $CONTENT_CHANGED"
           echo "Event: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
@@ -68,7 +68,7 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: '**/pnpm-lock.yaml'
 
-      # Estrategia de caché para Vite
+      # Caching strategy for Vite
       - name: Cache .vite
         uses: actions/cache@v4
         with:
@@ -78,7 +78,7 @@ jobs:
             ${{ runner.os }}-vite-${{ hashFiles('pnpm-lock.yaml') }}-
             ${{ runner.os }}-vite-
 
-      # Cache para la build de Astro - versión mejorada por rama
+      # Cache for Astro build - branch-specific version
       - name: Check build cache
         id: build_cache
         uses: actions/cache@v4
@@ -94,16 +94,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Determinar si necesitamos construir el sitio
+      # Determine if we need to build the site
       - name: Determine if build is needed
         id: need_build
         run: |
-          # Inicializar variables
+          # Initialize variables
           FORCE_BUILD="${{ inputs.force_build }}"
           CACHE_HIT="${{ steps.build_cache.outputs.cache-hit }}"
           CONTENT_CHANGED="${{ steps.check_changes.outputs.content_changed }}"
           
-          # Determinar si se necesita construir
+          # Determine if build is needed
           if [[ "$FORCE_BUILD" == "true" ]]; then
             echo "Building because force_build is true"
             SHOULD_BUILD=true
@@ -118,31 +118,31 @@ jobs:
             SHOULD_BUILD=false
           fi
           
-          # Guardar resultado
+          # Save result
           echo "should_build=$SHOULD_BUILD" >> $GITHUB_OUTPUT
           
-          # Registro detallado para diagnóstico
+          # Detailed logging for diagnostics
           echo "Build decision:" >> $GITHUB_STEP_SUMMARY
           echo "- Force build: $FORCE_BUILD" >> $GITHUB_STEP_SUMMARY
           echo "- Cache hit: $CACHE_HIT" >> $GITHUB_STEP_SUMMARY
           echo "- Content changed: $CONTENT_CHANGED" >> $GITHUB_STEP_SUMMARY
           echo "- Will build: $SHOULD_BUILD" >> $GITHUB_STEP_SUMMARY
 
-      # Solo construir si es necesario
+      # Only build if necessary
       - name: Build site
         if: steps.need_build.outputs.should_build == 'true'
         run: pnpm run build
 
-      # Sube el artefacto siempre
+      # Always upload the artifact
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: build
           path: dist/
           retention-days: 1
-          compression-level: 9 # Máxima compresión para reducir tamaño
+          compression-level: 9 # Maximum compression to reduce size
 
-      # Información detallada de build para debugging
+      # Detailed build info for debugging
       - name: Save build info
         run: |
           mkdir -p build-info
