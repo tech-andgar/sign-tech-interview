@@ -26,9 +26,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history to improve cache detección
+          fetch-depth: 0  # Fetch all history to improve cache detection
 
-      # Determinar si se ha modificado el contenido desde la última compilación
+      # Determine if content has been modified since last build
       - name: Check for content changes
         id: check_changes
         run: |
@@ -56,7 +56,7 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: '**/pnpm-lock.yaml'
 
-      # Mejor estrategia de caché para Vite
+      # Better caching strategy for Vite
       - name: Cache .vite
         uses: actions/cache@v4
         with:
@@ -66,7 +66,7 @@ jobs:
             ${{ runner.os }}-vite-${{ hashFiles('pnpm-lock.yaml') }}-
             ${{ runner.os }}-vite-
 
-      # Cache para la build de Astro - versión mejorada
+      # Cache for Astro build - improved version
       - name: Check build cache
         id: build_cache
         uses: actions/cache@v4
@@ -82,7 +82,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Determinamos si construir basado en caché y cambios
+      # Determine whether to build based on cache and changes
       - name: Build site
         if: |
           inputs.force_build || 
@@ -90,16 +90,16 @@ jobs:
           steps.check_changes.outputs.content_changed == 'true'
         run: pnpm run build
 
-      # Sube el artefacto siempre
+      # Always upload the artifact
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: build
           path: dist/
           retention-days: 1
-          compression-level: 9 # Máxima compresión para reducir tamaño
+          compression-level: 9 # Maximum compression to reduce size
 
-      # Información detallada de build para debugging
+      # Detailed build information for debugging
       - name: Save build info
         run: |
           mkdir -p build-info

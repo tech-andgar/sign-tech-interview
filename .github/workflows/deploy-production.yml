@@ -4,16 +4,16 @@ on:
   push:
     branches:
       - main
-  # Permite ejecutar manualmente el workflow para reutilizar el caché
+  # Allow manual workflow execution to reuse cache
   workflow_dispatch:
     inputs:
       force_build:
-        description: 'Forzar nueva build ignorando caché'
+        description: 'Force new build ignoring cache'
         required: false
         type: boolean
         default: false
 
-# Configuración para intentar reutilizar el caché entre ejecuciones
+# Configuration to try to reuse cache between runs
 concurrency:
   group: production-deployment
   cancel-in-progress: false
@@ -55,17 +55,17 @@ jobs:
         with:
           path: dist
 
-      # Configuración completa para GitHub Pages
+      # Complete configuration for GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
-        # Descomenta la siguiente línea y configura el permiso si prefieres usar este método
+        # Uncomment the following line and configure the permission if you prefer to use this method
         # uses: JamesIves/github-pages-deploy-action@v4
         # with:
         #   folder: dist
         #   branch: gh-pages
-        # O usa el método nativo de GitHub Pages (requiere configuración adicional)
+        # Or use the native GitHub Pages method (requires additional configuration)
         run: |
-          echo "Despliegue completado a GitHub Pages"
+          echo "Deployment completed to GitHub Pages"
           echo "URL: https://$(echo ${{ github.repository }} | cut -d'/' -f2).github.io/"
 
       - name: Create deployment summary
