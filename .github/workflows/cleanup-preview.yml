@@ -52,7 +52,7 @@ jobs:
       - name: Setup PNPM
         uses: pnpm/action-setup@v2
         with:
-          version: 2.2.2
+          version: 10.6.5
 
       - name: Setup Surge
         run: |
