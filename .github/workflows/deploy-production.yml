@@ -24,11 +24,6 @@ permissions:
   pages: write
   id-token: write
 
-# Environment configuration for GitHub Pages
-environment:
-  name: github-pages
-  url: ${{ steps.deployment.outputs.page_url }}
-
 jobs:
   build:
     uses: ./.github/workflows/shared-build.yml
@@ -39,6 +34,9 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     env:
       CACHE_HIT: ${{ needs.build.outputs.cache_hit }}
     
