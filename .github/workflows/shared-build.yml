@@ -7,10 +7,6 @@ on:
         required: false
         type: string
         default: '23'
-      force_build:
-        required: false
-        type: boolean
-        default: false
 
 jobs:
   build:
