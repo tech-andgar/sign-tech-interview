@@ -66,6 +66,10 @@ jobs:
 
       - name: Build
         run: pnpm run build
+        
+      - name: Setup Surge
+        run: |
+          pnpm install -g surge
 
       - name: Generate domain name
         id: domain
