@@ -4,7 +4,37 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+env:
+  NODE_VERSION: '23'
+
 jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      build_required: ${{ steps.filter.outputs.build_required }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for path filtering
+
+      - name: Check for relevant changes
+        id: filter
+        run: |
+          # Get changed files
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
+
+          # Check if any files in ./src were changed
+          if echo "$CHANGED_FILES" | grep -q "^src/"; then
+            NEEDS_BUILD=true
+          else
+            NEEDS_BUILD=false
+          fi
+
+          echo "build_required=$NEEDS_BUILD" >> $GITHUB_OUTPUT
+          echo "Changed files: $CHANGED_FILES"
+          echo "Build required: $NEEDS_BUILD"
+
   check-secrets:
     runs-on: ubuntu-latest
     outputs:
@@ -44,16 +74,18 @@ jobs:
           exit 1
 
   build:
-    needs: check-secrets
-    if: needs.check-secrets.outputs.has_token == 'true'
+    needs: [check-secrets, check-changes]
+    if: needs.check-secrets.outputs.has_token == 'true' && needs.check-changes.outputs.build_required == 'true'
     uses: ./.github/workflows/shared-build.yml
 
   deploy-preview:
-    needs: build
-    if: needs.check-secrets.outputs.has_token == 'true'
+    needs: [check-secrets, check-changes, build]
+    if: |
+      needs.check-secrets.outputs.has_token == 'true' &&
+      needs.check-changes.outputs.build_required == 'true' && success()
     runs-on: ubuntu-latest
-    env:
-      NODE_VERSION: '23'
+    outputs:
+      url: ${{ steps.domain.outputs.url }}
 
     steps:
       - name: Download build artifact
@@ -90,6 +122,7 @@ jobs:
         uses: pnpm/action-setup@v2
         with:
           version: latest
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Install surge
         run: pnpm install -g surge
@@ -100,16 +133,47 @@ jobs:
         run: |
           surge ./dist ${{ steps.domain.outputs.deploy_domain }} --token $SURGE_TOKEN
 
-      - name: Comment PR with Deployment URL
+  publish-result:
+    needs: [check-changes, deploy-preview]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Use placeholder for non-source changes
+        if: needs.check-changes.outputs.build_required == 'false'
+        run: |
+          mkdir -p dist
+          echo "<html><body><h1>Documentation Update</h1><p>This PR only contains changes to documentation or other non-source files that don't affect the deployed site.</p></body></html>" > dist/index.html
+
+      - name: Comment PR with Result
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const output = `🚀 Preview deployment is ready!
+            const deploySuccess = '${{ needs.deploy-preview.result }}' === 'success';
+            const buildRequired = '${{ needs.check-changes.outputs.build_required }}' === 'true';
+            const deployUrl = '${{ needs.deploy-preview.outputs.url }}';
 
-            URL: ${{ steps.domain.outputs.url }}
+            let output;
 
-            Built with Node.js ${{ env.NODE_VERSION }} and pnpm`;
+            if (!deploySuccess) {
+              output = `⚠️ Deployment failed
+
+              There was an issue with the preview deployment. Please check the workflow logs for details.`;
+            } else if (buildRequired) {
+              output = `🚀 Preview deployment is ready!
+
+            URL: ${deployUrl}
+
+            Status: New build deployed
+            Built with Node.js ${process.env.NODE_VERSION} and pnpm`;
+            } else {
+              output = `📝 Documentation Update
+
+            A placeholder page has been deployed for this documentation-only PR.
+
+            No build was needed since only non-source files were changed.`;
+            }
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
