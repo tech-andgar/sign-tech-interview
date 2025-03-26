@@ -37,6 +37,7 @@ jobs:
 
   check-secrets:
     needs: [check-changes]
+    if: needs.check-changes.outputs.build_required == 'true'
     runs-on: ubuntu-latest
     outputs:
       has_token: ${{ steps.check_token.outputs.has_token }}
@@ -151,17 +152,12 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const deploySuccess = '${{ needs.deploy-preview.result }}' === 'success';
             const buildRequired = '${{ needs.check-changes.outputs.build_required }}' === 'true';
-            const deployUrl = '${{ needs.deploy-preview.outputs.url }}';
 
             let output;
 
-            if (!deploySuccess) {
-              output = `⚠️ Deployment failed
-
-              There was an issue with the preview deployment. Please check the workflow logs for details.`;
-            } else if (buildRequired) {
+            if (buildRequired) {
+              const deployUrl = '${{ needs.deploy-preview.outputs.url }}';
               output = `🚀 Preview deployment is ready!
 
             URL: ${deployUrl}
