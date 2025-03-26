@@ -7,52 +7,50 @@ inputs:
     default: '23'
     type: string
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - uses: pnpm/action-setup@v4
+      name: Install pnpm
+      with:
+        version: 10.6.5
+        run_install: true
 
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
-        with:
-          version: 10.6.5
-          run_install: true
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node_version }}
+        cache: 'pnpm'
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: 'pnpm'
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+    - name: Build site
+      run: pnpm run build
 
-      - name: Build site
-        run: pnpm run build
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: build
+        path: dist/
+        retention-days: 1
+        compression-level: 9 # Maximum compression to reduce size
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: build
-          path: dist/
-          retention-days: 1
-          compression-level: 9 # Maximum compression to reduce size
+    - name: Save build info
+      run: |
+        mkdir -p build-info
+        echo "Build timestamp: $(date)" > build-info/build-details.txt
+        echo "Git commit: ${{ github.sha }}" >> build-info/build-details.txt
+        echo "Branch/ref: ${{ github.ref_name }}" >> build-info/build-details.txt
+        echo "Node version: ${{ inputs.node_version }}" >> build-info/build-details.txt
+        echo "Event: ${{ github.event_name }}" >> build-info/build-details.txt
 
-      - name: Save build info
-        run: |
-          mkdir -p build-info
-          echo "Build timestamp: $(date)" > build-info/build-details.txt
-          echo "Git commit: ${{ github.sha }}" >> build-info/build-details.txt
-          echo "Branch/ref: ${{ github.ref_name }}" >> build-info/build-details.txt
-          echo "Node version: ${{ inputs.node_version }}" >> build-info/build-details.txt
-          echo "Event: ${{ github.event_name }}" >> build-info/build-details.txt
-
-      - name: Upload build info
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-info
-          path: build-info/
-          retention-days: 1
+    - name: Upload build info
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-info
+        path: build-info/
+        retention-days: 1
