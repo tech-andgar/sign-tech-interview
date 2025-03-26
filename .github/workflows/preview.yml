@@ -141,34 +141,63 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Comment PR with Result
+      - name: Update or Create PR Comment
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const buildRequired = '${{ needs.check-changes.outputs.build_required }}' === 'true';
-
-            let output;
-
+            const timestamp = new Date().toISOString();
+            
+            let commentBody;
+            
             if (buildRequired) {
               const deployUrl = '${{ needs.deploy-preview.outputs.url }}';
-              output = `🚀 Preview deployment is ready!
-
-            URL: ${deployUrl}
-
-            Status: New build deployed
-            Built with Node.js ${process.env.NODE_VERSION} and pnpm`;
+              commentBody = `## 🚀 Preview Deployment
+              
+            **URL:** ${deployUrl}
+            
+            **Status:** New build deployed
+            **Built with:** Node.js ${{ env.NODE_VERSION }} and pnpm
+            **Last updated:** ${timestamp}`;
             } else {
-              output = `📝 Documentation Update
-
-            A placeholder page has been deployed for this documentation-only PR.
-
-            No build was needed since only non-source files were changed.`;
+              commentBody = `## 📝 Documentation Update
+              
+            **Status:** No build needed (only non-source files changed)
+            **Last updated:** ${timestamp}`;
             }
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
+            
+            // Add a unique identifier that we can search for later
+            commentBody += '\n\n<!-- PR-PREVIEW-COMMENT -->';
+            
+            // Get all comments on the PR
+            const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: output
-            })
+              issue_number: context.issue.number,
+            });
+            
+            // Find our previous deployment comment if it exists
+            const deployComment = comments.find(comment => 
+              comment.body.includes('<!-- PR-PREVIEW-COMMENT -->')
+            );
+            
+            if (deployComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: deployComment.id,
+                body: commentBody
+              });
+              console.log(`Updated comment ID ${deployComment.id}`);
+            } else {
+              // Create new comment
+              const { data: newComment } = await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody
+              });
+              console.log(`Created new comment ID ${newComment.id}`);
+            }
