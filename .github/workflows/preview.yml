@@ -141,12 +141,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Use placeholder for non-source changes
-        if: needs.check-changes.outputs.build_required == 'false'
-        run: |
-          mkdir -p dist
-          echo "<html><body><h1>Documentation Update</h1><p>This PR only contains changes to documentation or other non-source files that don't affect the deployed site.</p></body></html>" > dist/index.html
-
       - name: Comment PR with Result
         uses: actions/github-script@v6
         with:
