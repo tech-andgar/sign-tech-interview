@@ -148,40 +148,40 @@ jobs:
           script: |
             const buildRequired = '${{ needs.check-changes.outputs.build_required }}' === 'true';
             const timestamp = new Date().toISOString();
-            
+
             let commentBody;
-            
+
             if (buildRequired) {
               const deployUrl = '${{ needs.deploy-preview.outputs.url }}';
               commentBody = `## 🚀 Preview Deployment
-              
+
             **URL:** ${deployUrl}
-            
+
             **Status:** New build deployed
             **Built with:** Node.js ${{ env.NODE_VERSION }} and pnpm
             **Last updated:** ${timestamp}`;
             } else {
               commentBody = `## 📝 Documentation Update
-              
+
             **Status:** No build needed (only non-source files changed)
             **Last updated:** ${timestamp}`;
             }
-            
+
             // Add a unique identifier that we can search for later
             commentBody += '\n\n<!-- PR-PREVIEW-COMMENT -->';
-            
+
             // Get all comments on the PR
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
             });
-            
+
             // Find our previous deployment comment if it exists
-            const deployComment = comments.find(comment => 
+            const deployComment = comments.find(comment =>
               comment.body.includes('<!-- PR-PREVIEW-COMMENT -->')
             );
-            
+
             if (deployComment) {
               // Update existing comment
               await github.rest.issues.updateComment({
