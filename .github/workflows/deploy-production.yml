@@ -7,18 +7,29 @@ on:
   # Allow manual workflow execution
   workflow_dispatch:
 
-# No need for concurrency without cache
+env:
+  NODE_VERSION: '23'
+
 jobs:
-  build:
-    uses: ./.github/workflows/shared-build.yml
+  check-changes:
+    uses: ./.github/actions/check-changes
     with:
-      node_version: '23'
+      event_name: ${{ github.event_name }}
+
+  build:
+    needs: [check-changes]
+    if: needs.check-changes.outputs.build_required == 'true'
+    uses: ./.github/workflows/actions/build-astro
+    with:
+      node_version: ${{ env.NODE_VERSION }}
 
   deploy:
-    needs: build
+    needs: [build]
+    if: success()
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
@@ -60,5 +71,6 @@ jobs:
         run: |
           echo "## 🚀 Production Deployment" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Deployment timestamp: $(date)" >> $GITHUB_STEP_SUMMARY
-          echo "Repository: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** New build deployed" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment timestamp:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "**Repository:** ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY

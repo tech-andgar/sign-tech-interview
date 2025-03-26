@@ -9,31 +9,9 @@ env:
 
 jobs:
   check-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      build_required: ${{ steps.filter.outputs.build_required }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Required for path filtering
-
-      - name: Check for relevant changes
-        id: filter
-        run: |
-          # Get changed files
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
-
-          # Check if any files in ./src were changed
-          if echo "$CHANGED_FILES" | grep -q "^src/"; then
-            NEEDS_BUILD=true
-          else
-            NEEDS_BUILD=false
-          fi
-
-          echo "build_required=$NEEDS_BUILD" >> $GITHUB_OUTPUT
-          echo "Changed files: $CHANGED_FILES"
-          echo "Build required: $NEEDS_BUILD"
+    uses: ./.github/actions/check-changes
+    with:
+      event_name: pull_request
 
   check-secrets:
     needs: [check-changes]
@@ -77,14 +55,17 @@ jobs:
 
   build:
     needs: [check-secrets]
-    if: needs.check-secrets.outputs.has_token == 'true' && needs.check-changes.outputs.build_required == 'true'
-    uses: ./.github/workflows/shared-build.yml
+    if: |
+      needs.check-secrets.outputs.has_token == 'true' &&
+      needs.check-changes.outputs.build_required == 'true'
+    uses: ./.github/workflows/actions/build-astro
 
   deploy-preview:
     needs: [build]
     if: |
       needs.check-secrets.outputs.has_token == 'true' &&
-      needs.check-changes.outputs.build_required == 'true' && success()
+      needs.check-changes.outputs.build_required == 'true' &&
+      success()
     runs-on: ubuntu-latest
     outputs:
       url: ${{ steps.domain.outputs.url }}

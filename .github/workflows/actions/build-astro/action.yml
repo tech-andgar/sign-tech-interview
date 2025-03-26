@@ -1,12 +1,11 @@
-name: Shared Build Workflow
-
-on:
-  workflow_call:
-    inputs:
-      node_version:
-        required: false
-        type: string
-        default: '23'
+name: Shared Build Astro Workflow
+description: "Shared workflow to build Astro site"
+inputs:
+  node_version:
+    description: "Node version"
+    required: true
+    default: '23'
+    type: string
 
 jobs:
   build:
