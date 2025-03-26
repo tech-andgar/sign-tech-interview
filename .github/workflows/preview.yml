@@ -9,7 +9,7 @@ env:
 
 jobs:
   check-changes:
-    uses: ./.github/actions/check-changes
+    uses: ./.github/workflows/check-changes.yml
     with:
       event_name: pull_request
 
@@ -58,7 +58,7 @@ jobs:
     if: |
       needs.check-secrets.outputs.has_token == 'true' &&
       needs.check-changes.outputs.build_required == 'true'
-    uses: ./.github/workflows/actions/build-astro
+    uses: ./.github/workflows/shared-build.yml
 
   deploy-preview:
     needs: [build]
