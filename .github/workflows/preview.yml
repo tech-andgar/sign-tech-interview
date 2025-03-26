@@ -36,6 +36,7 @@ jobs:
           echo "Build required: $NEEDS_BUILD"
 
   check-secrets:
+    needs: [check-changes]
     runs-on: ubuntu-latest
     outputs:
       has_token: ${{ steps.check_token.outputs.has_token }}
@@ -74,12 +75,12 @@ jobs:
           exit 1
 
   build:
-    needs: [check-secrets, check-changes]
+    needs: [check-secrets]
     if: needs.check-secrets.outputs.has_token == 'true' && needs.check-changes.outputs.build_required == 'true'
     uses: ./.github/workflows/shared-build.yml
 
   deploy-preview:
-    needs: [check-secrets, check-changes, build]
+    needs: [build]
     if: |
       needs.check-secrets.outputs.has_token == 'true' &&
       needs.check-changes.outputs.build_required == 'true' && success()
