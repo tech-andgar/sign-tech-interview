@@ -7,18 +7,65 @@ on:
   # Allow manual workflow execution
   workflow_dispatch:
 
-# No need for concurrency without cache
+env:
+  NODE_VERSION: '23'
+
 jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      build_required: ${{ steps.check.outputs.build_required }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for path filtering
+
+      - name: Check for relevant changes
+        id: check
+        run: |
+          echo "Comparing PR changes"
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
+
+          echo "Changed files: $CHANGED_FILES"
+
+          # Determine if build is required - simplified approach for reliability
+          NEEDS_BUILD=false
+
+          for file in $CHANGED_FILES; do
+            # Check if file is important for build
+            if [[ "$file" == src/* ]] ||
+              [[ "$file" == *.config.* ]] ||
+              [[ "$file" == package.json ]] ||
+              [[ "$file" == pnpm-lock.yaml ]]; then
+              echo "Build trigger: $file"
+              NEEDS_BUILD=true
+              break
+            fi
+          done
+
+          if [[ "$NEEDS_BUILD" == "true" ]]; then
+            echo "Build required: YES - changes detected in build-related files"
+          else
+            echo "Build required: NO - no changes in build-related files"
+          fi
+
+          echo "build_required=$NEEDS_BUILD" >> $GITHUB_OUTPUT
+
   build:
+    needs: [check-changes]
+    if: needs.check-changes.outputs.build_required == 'true'
     uses: ./.github/workflows/shared-build.yml
     with:
       node_version: '23'
 
   deploy:
-    needs: build
+    needs: [build]
+    if: success()
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
@@ -60,5 +107,6 @@ jobs:
         run: |
           echo "## 🚀 Production Deployment" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Deployment timestamp: $(date)" >> $GITHUB_STEP_SUMMARY
-          echo "Repository: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** New build deployed" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment timestamp:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "**Repository:** ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY

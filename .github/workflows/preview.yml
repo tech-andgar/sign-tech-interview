@@ -4,8 +4,54 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+env:
+  NODE_VERSION: '23'
+
 jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      build_required: ${{ steps.check.outputs.build_required }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for path filtering
+
+      - name: Check for relevant changes
+        id: check
+        run: |
+          echo "Comparing PR changes"
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
+
+          echo "Changed files: $CHANGED_FILES"
+
+          # Determine if build is required - simplified approach for reliability
+          NEEDS_BUILD=false
+
+          for file in $CHANGED_FILES; do
+            # Check if file is important for build
+            if [[ "$file" == src/* ]] ||
+              [[ "$file" == *.config.* ]] ||
+              [[ "$file" == package.json ]] ||
+              [[ "$file" == pnpm-lock.yaml ]]; then
+              echo "Build trigger: $file"
+              NEEDS_BUILD=true
+              break
+            fi
+          done
+
+          if [[ "$NEEDS_BUILD" == "true" ]]; then
+            echo "Build required: YES - changes detected in build-related files"
+          else
+            echo "Build required: NO - no changes in build-related files"
+          fi
+
+          echo "build_required=$NEEDS_BUILD" >> $GITHUB_OUTPUT
+
   check-secrets:
+    needs: [check-changes]
+    if: needs.check-changes.outputs.build_required == 'true'
     runs-on: ubuntu-latest
     outputs:
       has_token: ${{ steps.check_token.outputs.has_token }}
@@ -44,16 +90,21 @@ jobs:
           exit 1
 
   build:
-    needs: check-secrets
-    if: needs.check-secrets.outputs.has_token == 'true'
+    needs: [check-secrets]
+    if: |
+      needs.check-secrets.outputs.has_token == 'true' &&
+      needs.check-changes.outputs.build_required == 'true'
     uses: ./.github/workflows/shared-build.yml
 
   deploy-preview:
-    needs: build
-    if: needs.check-secrets.outputs.has_token == 'true'
+    needs: [build]
+    if: |
+      needs.check-secrets.outputs.has_token == 'true' &&
+      needs.check-changes.outputs.build_required == 'true' &&
+      success()
     runs-on: ubuntu-latest
-    env:
-      NODE_VERSION: '23'
+    outputs:
+      url: ${{ steps.domain.outputs.url }}
 
     steps:
       - name: Download build artifact
@@ -86,10 +137,11 @@ jobs:
           echo "deploy_domain=$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
           echo "url=https://$DEPLOY_DOMAIN" >> $GITHUB_OUTPUT
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
         with:
           version: latest
+          run_install: false
 
       - name: Install surge
         run: pnpm install -g surge
@@ -100,20 +152,69 @@ jobs:
         run: |
           surge ./dist ${{ steps.domain.outputs.deploy_domain }} --token $SURGE_TOKEN
 
-      - name: Comment PR with Deployment URL
+  publish-result:
+    needs: [check-changes, deploy-preview]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Update or Create PR Comment
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const output = `🚀 Preview deployment is ready!
+            const buildRequired = '${{ needs.check-changes.outputs.build_required }}' === 'true';
+            const timestamp = new Date().toISOString();
 
-            URL: ${{ steps.domain.outputs.url }}
+            let commentBody;
 
-            Built with Node.js ${{ env.NODE_VERSION }} and pnpm`;
+            if (buildRequired) {
+              const deployUrl = '${{ needs.deploy-preview.outputs.url }}';
+              commentBody = `## 🚀 Live Preview Deployment
 
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
+            **URL:** ${deployUrl}
+
+            **Status:** New build deployed
+            **Built with:** Node.js ${{ env.NODE_VERSION }} and pnpm
+            **Last updated:** ${timestamp}`;
+            } else {
+              commentBody = `## 📝 Documentation Update
+
+            **Status:** No build needed (only non-source files changed)
+            **Last updated:** ${timestamp}`;
+            }
+
+            // Add a unique identifier that we can search for later
+            commentBody += '\n\n<!-- PR-PREVIEW-COMMENT -->';
+
+            // Get all comments on the PR
+            const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: output
-            })
+              issue_number: context.issue.number,
+            });
+
+            // Find our previous deployment comment if it exists
+            const deployComment = comments.find(comment =>
+              comment.body.includes('<!-- PR-PREVIEW-COMMENT -->')
+            );
+
+            if (deployComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: deployComment.id,
+                body: commentBody
+              });
+              console.log(`Updated comment ID ${deployComment.id}`);
+            } else {
+              // Create new comment
+              const { data: newComment } = await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody
+              });
+              console.log(`Created new comment ID ${newComment.id}`);
+            }
