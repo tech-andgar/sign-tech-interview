@@ -21,7 +21,7 @@ on:
     outputs:
       build_required:
         description: "Whether a build is required based on the changes detected"
-        value: ${{ jobs.check.outputs.build_required }}
+        value: ${{ jobs.check.outputs.filter.build_required }}
 
 jobs:
   check:
@@ -84,3 +84,5 @@ jobs:
           fi
 
           echo "build_required=$NEEDS_BUILD" >> $GITHUB_OUTPUT
+          # En GitHub Actions modernas, outputs a nivel de job debe usar el mismo identificador que el step
+          # En lugar de ::set-output que está obsoleto

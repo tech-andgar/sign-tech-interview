@@ -21,7 +21,7 @@ jobs:
     if: needs.check-changes.outputs.build_required == 'true'
     uses: ./.github/workflows/shared-build.yml
     with:
-      node_version: ${{ env.NODE_VERSION }}
+      node_version: '23'
 
   deploy:
     needs: [build]
