@@ -12,14 +12,14 @@ env:
 
 jobs:
   check-changes:
-    uses: ./.github/actions/check-changes
+    uses: ./.github/workflows/check-changes.yml
     with:
       event_name: ${{ github.event_name }}
 
   build:
     needs: [check-changes]
     if: needs.check-changes.outputs.build_required == 'true'
-    uses: ./.github/workflows/actions/build-astro
+    uses: ./.github/workflows/shared-build.yml
     with:
       node_version: ${{ env.NODE_VERSION }}
 
