@@ -12,9 +12,45 @@ env:
 
 jobs:
   check-changes:
-    uses: ./.github/workflows/check-changes.yml
-    with:
-      event_name: ${{ github.event_name }}
+    runs-on: ubuntu-latest
+    outputs:
+      build_required: ${{ steps.check.outputs.build_required }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for path filtering
+
+      - name: Check for relevant changes
+        id: check
+        run: |
+          echo "Comparing PR changes"
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
+
+          echo "Changed files: $CHANGED_FILES"
+
+          # Determine if build is required - simplified approach for reliability
+          NEEDS_BUILD=false
+
+          for file in $CHANGED_FILES; do
+            # Check if file is important for build
+            if [[ "$file" == src/* ]] ||
+              [[ "$file" == *.config.* ]] ||
+              [[ "$file" == package.json ]] ||
+              [[ "$file" == pnpm-lock.yaml ]]; then
+              echo "Build trigger: $file"
+              NEEDS_BUILD=true
+              break
+            fi
+          done
+
+          if [[ "$NEEDS_BUILD" == "true" ]]; then
+            echo "Build required: YES - changes detected in build-related files"
+          else
+            echo "Build required: NO - no changes in build-related files"
+          fi
+
+          echo "build_required=$NEEDS_BUILD" >> $GITHUB_OUTPUT
 
   build:
     needs: [check-changes]

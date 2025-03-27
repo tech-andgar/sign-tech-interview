@@ -8,11 +8,6 @@ env:
   NODE_VERSION: '23'
 
 jobs:
-  # check-changes:
-  #   uses: ./.github/workflows/check-changes.yml
-  #   with:
-  #     event_name: pull_request
-
   check-changes:
     runs-on: ubuntu-latest
     outputs:
