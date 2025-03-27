@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 0  # Required for path filtering
 
       - name: Check for relevant changes
-        id: filter
+        id: check
         run: |
           # Get changed files based on event type
           if [[ "${{ inputs.event_name }}" == "push" ]]; then
