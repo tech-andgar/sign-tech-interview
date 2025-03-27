@@ -35,32 +35,8 @@ jobs:
       - name: Check for relevant changes
         id: filter
         run: |
-          # Get changed files based on event type
-          if [[ "${{ inputs.event_name }}" == "push" ]]; then
-            # For push events, compare the last two commits
-            if [[ -n "${{ inputs.ref_before }}" && -n "${{ inputs.ref_after }}" ]]; then
-              echo "Using provided refs for comparison"
-              CHANGED_FILES=$(git diff --name-only ${{ inputs.ref_before }} ${{ inputs.ref_after }})
-            else
-              echo "Using HEAD^ and HEAD for comparison"
-              CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
-            fi
-          elif [[ "${{ inputs.event_name }}" == "pull_request" ]]; then
-            # For PR events, get files changed in the PR
-            if [[ -n "${{ inputs.ref_before }}" && -n "${{ inputs.ref_after }}" ]]; then
-              echo "Using provided refs for comparison"
-              CHANGED_FILES=$(git diff --name-only ${{ inputs.ref_before }} ${{ inputs.ref_after }})
-            else
-              echo "Using default PR comparison"
-              CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
-            fi
-          else
-            # For manual runs or other events, check if src directory has files
-            echo "No specific event comparison, checking if src directory exists"
-            CHANGED_FILES=$(find src -type f 2>/dev/null | tr '\n' ' ')
-          fi
-
-          echo "Changed files: $CHANGED_FILES"
+          # Get changed files
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
 
           # Check if any files in ./src were changed
           if echo "$CHANGED_FILES" | grep -q "^src/"; then
@@ -70,4 +46,5 @@ jobs:
           fi
 
           echo "build_required=$NEEDS_BUILD" >> $GITHUB_OUTPUT
+          echo "Changed files: $CHANGED_FILES"
           echo "Build required: $NEEDS_BUILD"
