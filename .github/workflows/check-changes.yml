@@ -66,18 +66,21 @@ jobs:
           NEEDS_BUILD=false
           
           for file in $CHANGED_FILES; do
-            # Check if file starts with src/ - most reliable method
-            if [[ "$file" == src/* ]]; then
-              echo "Build trigger: $file (starts with src/)"
+            # Check if file is important for build
+            if [[ "$file" == src/* ]] || 
+               [[ "$file" == *.config.* ]] || 
+               [[ "$file" == package.json ]] || 
+               [[ "$file" == pnpm-lock.yaml ]]; then
+              echo "Build trigger: $file"
               NEEDS_BUILD=true
               break
             fi
           done
           
           if [[ "$NEEDS_BUILD" == "true" ]]; then
-            echo "Build required: YES - changes detected in src/"
+            echo "Build required: YES - changes detected in build-related files"
           else
-            echo "Build required: NO - no changes in src/"
+            echo "Build required: NO - no changes in build-related files"
           fi
 
           echo "build_required=$NEEDS_BUILD" >> $GITHUB_OUTPUT
