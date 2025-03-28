@@ -26,6 +26,10 @@ jobs:
         run: |
           echo "Comparing changes with previous commit"
           # Verify we can get the previous commit
+          # This check is necessary because:
+          # 1. It prevents errors in new repositories where HEAD^ might not exist
+          # 2. It handles cases where the git history might be shallow or incomplete
+          # 3. It ensures the workflow doesn't fail when commit history can't be accessed
           if git rev-parse HEAD^ &>/dev/null; then
             # Get the previous commit on main
             PREVIOUS_COMMIT=$(git rev-parse HEAD^)
